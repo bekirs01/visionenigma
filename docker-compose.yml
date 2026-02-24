@@ -1,46 +1,46 @@
-version: '3.8'
+version: "3.8"
 
 services:
-
   db:
-    image: postgres:15
+    image: postgres:15-alpine
+    container_name: support_db
     environment:
-      POSTGRES_DB: enigma_db
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: secret123
+      POSTGRES_DB: support_mvp
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     ports:
       - "5432:5432"
     volumes:
-      - ./db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d support_mvp"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   backend:
     build: ./backend
+    container_name: support_backend
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/support_mvp
+      APP_ENV: development
+      EMAIL_MODE: mock
+      AI_PROVIDER: mock
     ports:
       - "8000:8000"
     depends_on:
-      - db
-    environment:
-      DATABASE_URL: postgresql://admin:secret123@db:5432/enigma_db
+      db:
+        condition: service_healthy
 
-  pgadmin:
-    image: dpage/pgadmin4
+  frontend:
+    build: ./frontend
+    container_name: support_frontend
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: admin
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
     ports:
-      - "5050:80"
+      - "3000:3000"
     depends_on:
-      - db
+      - backend
 
 volumes:
   postgres_data:
-```
-
----
-
-## Шаг 4 — Передать строку подключения участнику А
-
-Участник А (бэкенд) должен знать как подключиться к твоей локальной базе. Напиши ему в чат:
-```
-postgresql://postgres:secret123@localhost:5432/enigma_db
