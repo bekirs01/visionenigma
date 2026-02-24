@@ -10,6 +10,7 @@ async function fetchApi<T>(
   try {
     res = await fetch(url, {
       ...options,
+      credentials: "include",
       headers: { "Content-Type": "application/json", ...options?.headers },
     });
   } catch (e) {
@@ -33,18 +34,22 @@ export const api = {
 
   getCategories: () => fetchApi<import("@/app/types").Category[]>("/api/categories"),
 
-  getTickets: (params?: { search?: string; status?: string; category_id?: number; limit?: number; offset?: number }) => {
+  getTickets: (params?: { search?: string; status?: string; category_id?: number; limit?: number; offset?: number }, clientToken?: string) => {
     const sp = new URLSearchParams();
     if (params?.search) sp.set("search", params.search);
     if (params?.status) sp.set("status", params.status);
     if (params?.category_id != null) sp.set("category_id", String(params.category_id));
     if (params?.limit) sp.set("limit", String(params.limit));
     if (params?.offset) sp.set("offset", String(params.offset));
+    if (clientToken) sp.set("client_token", clientToken);
     const q = sp.toString();
     return fetchApi<import("@/app/types").Ticket[]>(`/api/tickets${q ? `?${q}` : ""}`);
   },
 
-  getTicket: (id: number) => fetchApi<import("@/app/types").Ticket>(`/api/tickets/${id}`),
+  getTicket: (id: number, clientToken?: string) => {
+    const q = clientToken ? `?client_token=${encodeURIComponent(clientToken)}` : "";
+    return fetchApi<import("@/app/types").Ticket>(`/api/tickets/${id}${q}`);
+  },
 
   createTicket: (data: import("@/app/types").TicketCreate) =>
     fetchApi<import("@/app/types").Ticket>("/api/tickets", {
@@ -75,9 +80,17 @@ export const api = {
       body: JSON.stringify({ reply_text: replyText }),
     }),
 
+  /** Проверка админа (cookie). 200 = ок, 403 = не админ */
+  adminCheck: () => fetchApi<{ ok: boolean }>("/api/admin/check"),
+  adminLogin: (code: string) =>
+    fetchApi<{ ok: boolean }>("/api/admin/login", {
+      method: "POST",
+      body: JSON.stringify({ code: code.trim() }),
+    }),
+
   seedDemo: () => fetchApi<{ message: string }>("/api/seed-demo", { method: "POST" }),
 
-  /** CSV indir: fetch ile alıp blob olarak indirir (proxy/CORS uyumlu) */
+  /** CSV export: fetch with credentials, then download as blob */
   async exportCsvDownload(params?: { search?: string; status?: string; category_id?: number }): Promise<void> {
     const sp = new URLSearchParams();
     if (params?.search) sp.set("search", params.search);
@@ -85,7 +98,7 @@ export const api = {
     if (params?.category_id != null) sp.set("category_id", String(params.category_id));
     const q = sp.toString();
     const url = `${API_BASE}/api/tickets/export.csv${q ? `?${q}` : ""}`;
-    const res = await fetch(url);
+    const res = await fetch(url, { credentials: "include" });
     if (!res.ok) throw new Error(`Export failed: ${res.status}`);
     const blob = await res.blob();
     const a = document.createElement("a");

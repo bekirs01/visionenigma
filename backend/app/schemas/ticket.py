@@ -15,7 +15,7 @@ class TicketBase(BaseModel):
 
 
 class TicketCreate(TicketBase):
-    pass
+    client_token: Optional[str] = None
 
 
 class TicketUpdate(BaseModel):
@@ -29,6 +29,7 @@ class TicketUpdate(BaseModel):
 class TicketRead(TicketBase):
     id: int
     external_id: Optional[str] = None
+    client_token: Optional[str] = None
     received_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
@@ -36,6 +37,7 @@ class TicketRead(TicketBase):
     ai_reply: Optional[str] = None
     reply_sent: bool = False
     sent_reply: Optional[str] = None
+    reply_sent_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

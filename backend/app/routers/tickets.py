@@ -1,7 +1,7 @@
 import io
 import csv
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Header
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from app.db import get_db
@@ -9,21 +9,32 @@ from app.models import Ticket, Category, AiAnalysis
 from app.schemas import TicketCreate, TicketRead, TicketUpdate, AnalyzeResponse, SuggestReplyResponse
 from app.repositories.ticket_repo import TicketRepository
 from app.services.mock_ai import MockAIService
+from app.auth import require_admin, require_admin_dep
 
 router = APIRouter(prefix="/api", tags=["tickets"])
 
 
 @router.get("/tickets", response_model=List[TicketRead])
 def list_tickets(
+    request: Request,
     search: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     category_id: Optional[int] = Query(None),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
+    client_token: Optional[str] = Query(None, alias="client_token"),
+    x_client_token: Optional[str] = Header(None),
     db: Session = Depends(get_db),
 ):
+    token = client_token or x_client_token
+    if require_admin(request):
+        repo = TicketRepository()
+        tickets = repo.get_list(db, search=search, status=status, category_id=category_id, client_token=None, limit=limit, offset=offset)
+        return tickets
+    if not token or not token.strip():
+        raise HTTPException(status_code=400, detail="Для просмотра обращений укажите client_token (query или заголовок X-Client-Token)")
     repo = TicketRepository()
-    tickets = repo.get_list(db, search=search, status=status, category_id=category_id, limit=limit, offset=offset)
+    tickets = repo.get_list(db, search=search, status=status, category_id=category_id, client_token=token.strip(), limit=limit, offset=offset)
     return tickets
 
 
@@ -38,6 +49,7 @@ def create_ticket(data: TicketCreate, db: Session = Depends(get_db)):
         priority=data.priority,
         category_id=data.category_id,
         source=data.source,
+        client_token=(data.client_token or "").strip() or None,
     )
     db.add(ticket)
     db.commit()
@@ -47,13 +59,15 @@ def create_ticket(data: TicketCreate, db: Session = Depends(get_db)):
 
 @router.get("/tickets/export.csv")
 def export_tickets_csv(
+    request: Request,
     search: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     category_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
+    _admin: bool = Depends(require_admin_dep),
 ):
     repo = TicketRepository()
-    tickets = repo.get_list(db, search=search, status=status, category_id=category_id, limit=5000, offset=0)
+    tickets = repo.get_list(db, search=search, status=status, category_id=category_id, client_token=None, limit=5000, offset=0)
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(["id", "sender_email", "subject", "status", "priority", "category_id", "created_at"])
@@ -68,18 +82,39 @@ def export_tickets_csv(
 
 
 @router.get("/tickets/{ticket_id}", response_model=TicketRead)
-def get_ticket(ticket_id: int, db: Session = Depends(get_db)):
+def get_ticket(
+    ticket_id: int,
+    request: Request,
+    client_token: Optional[str] = Query(None),
+    x_client_token: Optional[str] = Header(None),
+    db: Session = Depends(get_db),
+):
     ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
+    if not require_admin(request):
+        token = (client_token or x_client_token or "").strip()
+        if not token or ticket.client_token != token:
+            raise HTTPException(status_code=403, detail="Нет доступа к этому обращению")
     return ticket
 
 
 @router.patch("/tickets/{ticket_id}", response_model=TicketRead)
-def update_ticket(ticket_id: int, data: TicketUpdate, db: Session = Depends(get_db)):
+def update_ticket(
+    ticket_id: int,
+    data: TicketUpdate,
+    request: Request,
+    client_token: Optional[str] = Query(None),
+    x_client_token: Optional[str] = Header(None),
+    db: Session = Depends(get_db),
+):
     ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
+    if not require_admin(request):
+        token = (client_token or x_client_token or "").strip()
+        if not token or ticket.client_token != token:
+            raise HTTPException(status_code=403, detail="Нет доступа к этому обращению")
     if data.status is not None:
         ticket.status = data.status
     if data.priority is not None:

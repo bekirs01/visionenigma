@@ -39,27 +39,41 @@ def ensure_db_fallback():
     ensure_ticket_ai_columns()
 
 
+def _ticket_columns_sqlite(conn):
+    r = conn.execute(text("PRAGMA table_info(tickets)"))
+    return [row[1] for row in r]
+
+
+def _ticket_columns_pg(conn):
+    r = conn.execute(text(
+        "SELECT column_name FROM information_schema.columns WHERE table_name = 'tickets'"
+    ))
+    return [row[0] for row in r]
+
+
 def ensure_ticket_ai_columns():
-    """Mevcut tickets tablosuna ai/reply sütunları yoksa ekle (SQLite)."""
+    """Добавляет в таблицу tickets отсутствующие колонки (ai_*, reply_*, client_token)."""
     try:
         with engine.connect() as conn:
-            if "sqlite" not in str(engine.url):
-                return
-            r = conn.execute(text("PRAGMA table_info(tickets)"))
-            cols = [row[1] for row in r]
+            is_sqlite = "sqlite" in str(engine.url)
+            cols = _ticket_columns_sqlite(conn) if is_sqlite else _ticket_columns_pg(conn)
             need_commit = False
-            if "ai_category" not in cols:
-                conn.execute(text("ALTER TABLE tickets ADD COLUMN ai_category VARCHAR(100)"))
-                need_commit = True
-            if "ai_reply" not in cols:
-                conn.execute(text("ALTER TABLE tickets ADD COLUMN ai_reply TEXT"))
-                need_commit = True
-            if "reply_sent" not in cols:
-                conn.execute(text("ALTER TABLE tickets ADD COLUMN reply_sent INTEGER NOT NULL DEFAULT 0"))
-                need_commit = True
-            if "sent_reply" not in cols:
-                conn.execute(text("ALTER TABLE tickets ADD COLUMN sent_reply TEXT"))
-                need_commit = True
+            adds = [
+                ("ai_category", "ALTER TABLE tickets ADD COLUMN ai_category VARCHAR(100)" if is_sqlite else "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS ai_category VARCHAR(100)"),
+                ("ai_reply", "ALTER TABLE tickets ADD COLUMN ai_reply TEXT" if is_sqlite else "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS ai_reply TEXT"),
+                ("reply_sent", "ALTER TABLE tickets ADD COLUMN reply_sent INTEGER NOT NULL DEFAULT 0" if is_sqlite else "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS reply_sent INTEGER NOT NULL DEFAULT 0"),
+                ("sent_reply", "ALTER TABLE tickets ADD COLUMN sent_reply TEXT" if is_sqlite else "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS sent_reply TEXT"),
+                ("client_token", "ALTER TABLE tickets ADD COLUMN client_token VARCHAR(64)" if is_sqlite else "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS client_token VARCHAR(64)"),
+                ("reply_sent_at", "ALTER TABLE tickets ADD COLUMN reply_sent_at DATETIME" if is_sqlite else "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS reply_sent_at TIMESTAMP WITH TIME ZONE"),
+            ]
+            for col_name, sql in adds:
+                if col_name not in cols:
+                    try:
+                        conn.execute(text(sql))
+                        need_commit = True
+                    except Exception:
+                        if is_sqlite:
+                            raise
             if need_commit:
                 conn.commit()
     except Exception:

@@ -29,15 +29,16 @@ class Settings(BaseSettings):
     ai_provider: str = "mock"
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
-    # IMAP/SMTP placeholders (future)
-    imap_host: str = ""
-    imap_port: int = 993
-    imap_user: str = ""
-    imap_pass: str = ""
+    admin_access_code: str = ""
     smtp_host: str = ""
     smtp_port: int = 587
     smtp_user: str = ""
     smtp_pass: str = ""
+    smtp_from: str = ""
+    imap_host: str = ""
+    imap_port: int = 993
+    imap_user: str = ""
+    imap_pass: str = ""
 
     class Config:
         env_file = ".env"

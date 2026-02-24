@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.db import engine, Base, ensure_db_fallback
 from app import models  # noqa: F401 - tablolar Base.metadata'ya kayıt olsun
-from app.routers import health, categories, tickets, seed, email_stub, ai
+from app.routers import health, categories, tickets, seed, email_stub, ai, admin_auth
 
 app = FastAPI(title="Support MVP API", version="0.1.0")
 
@@ -22,6 +22,7 @@ app.add_middleware(
 )
 
 app.include_router(health.router)
+app.include_router(admin_auth.router)
 app.include_router(categories.router)
 app.include_router(tickets.router)
 app.include_router(seed.router)

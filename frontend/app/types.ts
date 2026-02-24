@@ -23,6 +23,7 @@ export interface Ticket {
   ai_reply?: string;
   reply_sent?: boolean | number;
   sent_reply?: string;
+  reply_sent_at?: string;
 }
 
 export interface TicketCreate {
@@ -34,6 +35,7 @@ export interface TicketCreate {
   priority?: string;
   category_id?: number;
   source?: string;
+  client_token?: string;
 }
 
 export interface TicketUpdate {

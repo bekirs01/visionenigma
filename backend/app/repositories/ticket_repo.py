@@ -11,10 +11,13 @@ class TicketRepository:
         search: Optional[str] = None,
         status: Optional[str] = None,
         category_id: Optional[int] = None,
+        client_token: Optional[str] = None,
         limit: int = 50,
         offset: int = 0,
     ) -> List[Ticket]:
         q = db.query(Ticket)
+        if client_token is not None:
+            q = q.filter(Ticket.client_token == client_token)
         if search:
             term = f"%{search}%"
             q = q.filter(

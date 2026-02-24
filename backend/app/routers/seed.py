@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.db import get_db
+from app.auth import require_admin_dep
 from app.models import Category, Ticket
 
 router = APIRouter(prefix="/api", tags=["seed"])
@@ -21,7 +22,7 @@ DEMO_TICKETS = [
 
 
 @router.post("/seed-demo")
-def seed_demo(db: Session = Depends(get_db)):
+def seed_demo(db: Session = Depends(get_db), _admin: bool = Depends(require_admin_dep)):
     # Ensure default categories exist
     for c in DEMO_CATEGORIES:
         existing = db.query(Category).filter(Category.name == c["name"]).first()
