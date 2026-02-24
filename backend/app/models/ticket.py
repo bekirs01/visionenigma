@@ -40,7 +40,12 @@ class Ticket(Base):
     received_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-
+    # AI / reply alanları (admin panel)
+    ai_category = Column(String(100), nullable=True, index=True)
+    ai_reply = Column(Text, nullable=True)
+    reply_sent = Column(Integer, nullable=False, default=0)  # 0/1 SQLite uyumlu
+    sent_reply = Column(Text, nullable=True)
+    sent_reply = Column(Text, nullable=True)
     category = relationship("Category", back_populates="tickets")
     messages = relationship("Message", back_populates="ticket", cascade="all, delete-orphan")
     ai_analyses = relationship("AiAnalysis", back_populates="ticket", cascade="all, delete-orphan")

@@ -20,6 +20,8 @@ export default function TicketDetailPage() {
   const [suggestResult, setSuggestResult] = useState<SuggestReplyResponse | null>(null);
   const [analyzeLoading, setAnalyzeLoading] = useState(false);
   const [suggestLoading, setSuggestLoading] = useState(false);
+  const [sendReplyLoading, setSendReplyLoading] = useState(false);
+  const [showSendConfirm, setShowSendConfirm] = useState(false);
 
   const loadTicket = useCallback(async () => {
     if (!id) return;
@@ -100,6 +102,36 @@ export default function TicketDetailPage() {
     }
   };
 
+  const handleAiAnalyze = async () => {
+    if (!id) return;
+    setAnalyzeLoading(true);
+    setError(null);
+    try {
+      await api.aiAnalyze(id);
+      await loadTicket();
+      setShowSendConfirm(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "AI analiz hatası");
+    } finally {
+      setAnalyzeLoading(false);
+    }
+  };
+
+  const handleSendReply = async () => {
+    if (!id || !ticket?.ai_reply) return;
+    setSendReplyLoading(true);
+    setError(null);
+    try {
+      await api.aiSendReply(id, ticket.ai_reply);
+      await loadTicket();
+      setShowSendConfirm(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Gönderim hatası");
+    } finally {
+      setSendReplyLoading(false);
+    }
+  };
+
   const categoryName = (cid: number | undefined) => categories.find((c) => c.id === cid)?.name ?? "—";
 
   if (loading) {
@@ -123,9 +155,14 @@ export default function TicketDetailPage() {
     <div className="min-h-screen">
       <header className="bg-white/80 backdrop-blur-sm border-b border-black/5 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
-          <Link href="/" className="text-indigo-600 hover:text-indigo-700 text-sm font-medium hover:underline">
-            ← К списку
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link href="/" className="text-indigo-600 hover:text-indigo-700 text-sm font-medium hover:underline">
+              ← К списку
+            </Link>
+            <Link href="/admin" className="text-slate-500 hover:text-slate-700 text-sm font-medium hover:underline">
+              Admin
+            </Link>
+          </div>
           <h1 className="text-xl font-semibold text-slate-800 mt-2">Обращение #{ticket.id}</h1>
         </div>
       </header>
@@ -215,6 +252,47 @@ export default function TicketDetailPage() {
               {saving ? <><Spinner className="w-3.5 h-3.5" /> Сохранение…</> : "Сохранить"}
             </Button>
           </form>
+        </Card>
+
+        <Card className="p-5">
+          <h2 className="text-lg font-semibold text-slate-800 mb-4">Gerçek AI (OpenAI)</h2>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="primary" onClick={handleAiAnalyze} disabled={analyzeLoading}>
+              {analyzeLoading ? <><Spinner className="w-3.5 h-3.5" /> Analiz…</> : "AI ile analiz et"}
+            </Button>
+          </div>
+          {(ticket.ai_category || ticket.ai_reply) && (
+            <div className="mt-4 space-y-3">
+              {ticket.ai_category && (
+                <p className="text-sm text-slate-700"><span className="font-medium">Önerilen kategori:</span> {ticket.ai_category}</p>
+              )}
+              {ticket.ai_reply && (
+                <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-100">
+                  <p className="text-sm font-medium text-slate-800 mb-2">Önerilen cevap:</p>
+                  <pre className="text-sm text-slate-700 whitespace-pre-wrap">{ticket.ai_reply}</pre>
+                </div>
+              )}
+              {ticket.ai_reply && showSendConfirm && (
+                <div className="p-3 rounded-lg bg-amber-50 border border-amber-200">
+                  <p className="text-sm font-medium text-slate-800 mb-2">Bu cevabı gönderelim mi?</p>
+                  <div className="flex gap-2">
+                    <Button type="button" variant="primary" onClick={handleSendReply} disabled={sendReplyLoading}>
+                      {sendReplyLoading ? <><Spinner className="w-3.5 h-3.5" /> Gönderiliyor…</> : "Gönder"}
+                    </Button>
+                    <Button type="button" variant="secondary" onClick={() => setShowSendConfirm(false)}>
+                      İptal
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          {(ticket.reply_sent || ticket.sent_reply) && (
+            <div className="mt-4 p-3 rounded-lg bg-slate-50 border border-slate-200">
+              <p className="text-sm font-medium text-slate-800 mb-1">Gönderilen cevap</p>
+              <pre className="text-sm text-slate-700 whitespace-pre-wrap">{ticket.sent_reply || ticket.ai_reply || "—"}</pre>
+            </div>
+          )}
         </Card>
 
         <Card className="p-5">

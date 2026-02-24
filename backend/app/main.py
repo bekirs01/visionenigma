@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.db import engine, Base
-from app.routers import health, categories, tickets, seed, email_stub
+from app.db import engine, Base, ensure_db_fallback
+from app import models  # noqa: F401 - tablolar Base.metadata'ya kayıt olsun
+from app.routers import health, categories, tickets, seed, email_stub, ai
 
 app = FastAPI(title="Support MVP API", version="0.1.0")
 
@@ -25,8 +26,9 @@ app.include_router(categories.router)
 app.include_router(tickets.router)
 app.include_router(seed.router)
 app.include_router(email_stub.router)
+app.include_router(ai.router)
 
 
 @app.on_event("startup")
 def startup():
-    pass  # Tables created via Alembic migrations
+    ensure_db_fallback()

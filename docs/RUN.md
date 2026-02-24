@@ -38,6 +38,7 @@ Tarayıcıda **http://localhost:3000**.
 ## Ortam değişkenleri
 
 - **Backend:** `backend/.env` — `DATABASE_URL` (Supabase veya yerel Postgres). Örnek: `.env.example` içeriği.
+- **Yerel çalışma:** `./start.sh` backend'i `USE_SQLITE=1` ile başlatır; böylece Supabase erişilemezse bile Internal Server Error oluşmaz, SQLite kullanılır.
 - **Frontend:** `frontend/.env.local` opsiyonel — `NEXT_PUBLIC_API_BASE_URL` boş bırakılırsa Next.js proxy kullanır (`/api` ve `/health` → 8000).
 
 ---

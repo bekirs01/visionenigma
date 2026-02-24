@@ -64,6 +64,17 @@ export const api = {
   suggestReply: (id: number) =>
     fetchApi<import("@/app/types").SuggestReplyResponse>(`/api/tickets/${id}/suggest-reply`, { method: "POST" }),
 
+  /** Gerçek AI: OpenAI ile analiz (kategori + cevap), ticket.ai_category ve ai_reply güncellenir */
+  aiAnalyze: (ticketId: number) =>
+    fetchApi<{ ai_category: string; ai_reply: string }>(`/api/ai/analyze/${ticketId}`, { method: "POST" }),
+
+  /** Cevabı gönderildi olarak işaretle */
+  aiSendReply: (ticketId: number, replyText: string) =>
+    fetchApi<{ ok: boolean }>(`/api/ai/send-reply/${ticketId}`, {
+      method: "POST",
+      body: JSON.stringify({ reply_text: replyText }),
+    }),
+
   seedDemo: () => fetchApi<{ message: string }>("/api/seed-demo", { method: "POST" }),
 
   /** CSV indir: fetch ile alıp blob olarak indirir (proxy/CORS uyumlu) */

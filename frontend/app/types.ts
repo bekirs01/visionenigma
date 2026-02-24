@@ -19,6 +19,10 @@ export interface Ticket {
   received_at?: string;
   created_at?: string;
   updated_at?: string;
+  ai_category?: string;
+  ai_reply?: string;
+  reply_sent?: boolean | number;
+  sent_reply?: string;
 }
 
 export interface TicketCreate {

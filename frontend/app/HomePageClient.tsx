@@ -6,7 +6,15 @@ import { api } from "@/lib/api";
 import type { Ticket, Category, TicketCreate } from "@/app/types";
 import { Card, Button, Badge, Alert, Spinner } from "@/components/ui";
 
-export default function HomePageClient() {
+export default function HomePageClient({
+  title = "Обращения техподдержки",
+  backLinkLabel,
+  backLinkUrl = "/",
+}: {
+  title?: string;
+  backLinkLabel?: string;
+  backLinkUrl?: string;
+}) {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -123,12 +131,24 @@ export default function HomePageClient() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
+              {backLinkLabel && backLinkUrl && (
+                <Link href={backLinkUrl} className="text-sm text-indigo-600 hover:underline block mb-1">
+                  ← {backLinkLabel}
+                </Link>
+              )}
               <h1 className="text-xl font-semibold text-slate-800 tracking-tight">
-                Обращения техподдержки
+                {title}
               </h1>
               <p className="text-sm text-slate-500 mt-0.5">
                 Список обращений и создание нового
               </p>
+              {title === "Обращения техподдержки" && (
+                <p className="text-xs text-slate-400 mt-1">
+                  <Link href="/user" className="text-indigo-500 hover:underline">Kullanıcı paneli</Link>
+                  {" · "}
+                  <Link href="/admin" className="text-indigo-500 hover:underline">Admin paneli</Link>
+                </p>
+              )}
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Button variant="secondary" onClick={loadTickets}>

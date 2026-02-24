@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from datetime import datetime
 from typing import Optional
 
@@ -32,9 +32,22 @@ class TicketRead(TicketBase):
     received_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    ai_category: Optional[str] = None
+    ai_reply: Optional[str] = None
+    reply_sent: bool = False
+    sent_reply: Optional[str] = None
 
     class Config:
         from_attributes = True
+
+    @field_validator("reply_sent", mode="before")
+    @classmethod
+    def coerce_reply_sent(cls, v: object) -> bool:
+        if isinstance(v, bool):
+            return v
+        if v in (1, "1", True):
+            return True
+        return False
 
 
 class TicketListQuery(BaseModel):

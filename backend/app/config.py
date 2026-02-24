@@ -4,6 +4,9 @@ import os
 
 
 def _database_url() -> str:
+    # Yerel geliştirme: Supabase erişilemezse USE_SQLITE=1 ile SQLite kullanın
+    if os.getenv("USE_SQLITE", "").strip() == "1":
+        return "sqlite:///./support_mvp.db"
     if os.getenv("DATABASE_URL"):
         return os.getenv("DATABASE_URL", "")
     # PostgreSQL from env (Docker / production)
@@ -48,5 +51,7 @@ def get_settings() -> Settings:
 
 
 def get_database_url() -> str:
+    if os.getenv("USE_SQLITE", "").strip() == "1":
+        return "sqlite:///./support_mvp.db"
     s = get_settings()
     return s.database_url or _database_url()
