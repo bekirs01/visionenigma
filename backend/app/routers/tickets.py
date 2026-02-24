@@ -1,5 +1,6 @@
 import io
 import csv
+from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
@@ -12,11 +13,11 @@ from app.services.mock_ai import MockAIService
 router = APIRouter(prefix="/api", tags=["tickets"])
 
 
-@router.get("/tickets", response_model=list[TicketRead])
+@router.get("/tickets", response_model=List[TicketRead])
 def list_tickets(
-    search: str | None = Query(None),
-    status: str | None = Query(None),
-    category_id: int | None = Query(None),
+    search: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    category_id: Optional[int] = Query(None),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
@@ -46,9 +47,9 @@ def create_ticket(data: TicketCreate, db: Session = Depends(get_db)):
 
 @router.get("/tickets/export.csv")
 def export_tickets_csv(
-    search: str | None = Query(None),
-    status: str | None = Query(None),
-    category_id: int | None = Query(None),
+    search: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    category_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
 ):
     repo = TicketRepository()

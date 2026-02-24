@@ -1,14 +1,23 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+// Proxy kullanıyorsak (next.config rewrites) boş = same-origin. Yoksa NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
 async function fetchApi<T>(
   path: string,
   options?: RequestInit
 ): Promise<T> {
   const url = path.startsWith("http") ? path : `${API_BASE}${path}`;
-  const res = await fetch(url, {
-    ...options,
-    headers: { "Content-Type": "application/json", ...options?.headers },
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      ...options,
+      headers: { "Content-Type": "application/json", ...options?.headers },
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Bağlantı hatası";
+    if (msg === "Failed to fetch" || msg.includes("fetch"))
+      throw new Error("Sunucuya bağlanılamadı. Backend çalışıyor mu? (http://localhost:8000)");
+    throw new Error(msg);
+  }
   if (!res.ok) {
     const text = await res.text();
     throw new Error(text || `HTTP ${res.status}`);
@@ -56,6 +65,24 @@ export const api = {
     fetchApi<import("@/app/types").SuggestReplyResponse>(`/api/tickets/${id}/suggest-reply`, { method: "POST" }),
 
   seedDemo: () => fetchApi<{ message: string }>("/api/seed-demo", { method: "POST" }),
+
+  /** CSV indir: fetch ile alıp blob olarak indirir (proxy/CORS uyumlu) */
+  async exportCsvDownload(params?: { search?: string; status?: string; category_id?: number }): Promise<void> {
+    const sp = new URLSearchParams();
+    if (params?.search) sp.set("search", params.search);
+    if (params?.status) sp.set("status", params.status);
+    if (params?.category_id != null) sp.set("category_id", String(params.category_id));
+    const q = sp.toString();
+    const url = `${API_BASE}/api/tickets/export.csv${q ? `?${q}` : ""}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Export failed: ${res.status}`);
+    const blob = await res.blob();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "tickets.csv";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  },
 
   exportCsvUrl: (params?: { search?: string; status?: string; category_id?: number }) => {
     const sp = new URLSearchParams();

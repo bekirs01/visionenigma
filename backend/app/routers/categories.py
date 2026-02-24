@@ -1,3 +1,4 @@
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db import get_db
@@ -7,7 +8,7 @@ from app.schemas import CategoryCreate, CategoryRead, CategoryUpdate
 router = APIRouter(prefix="/api", tags=["categories"])
 
 
-@router.get("/categories", response_model=list[CategoryRead])
+@router.get("/categories", response_model=List[CategoryRead])
 def list_categories(db: Session = Depends(get_db)):
     return db.query(Category).all()
 
