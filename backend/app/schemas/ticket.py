@@ -1,6 +1,7 @@
 from pydantic import BaseModel, field_validator
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
+import json
 
 
 class TicketBase(BaseModel):
@@ -39,6 +40,16 @@ class TicketRead(TicketBase):
     sent_reply: Optional[str] = None
     reply_sent_at: Optional[datetime] = None
 
+    # ЭРИС: извлечённые данные из писем
+    sender_full_name: Optional[str] = None
+    object_name: Optional[str] = None
+    sender_phone: Optional[str] = None
+    serial_numbers: Optional[List[str]] = None  # Список заводских номеров
+    device_type: Optional[str] = None
+    sentiment: Optional[str] = None  # positive / neutral / negative
+    issue_summary: Optional[str] = None
+    request_category: Optional[str] = None
+
     class Config:
         from_attributes = True
 
@@ -50,6 +61,24 @@ class TicketRead(TicketBase):
         if v in (1, "1", True):
             return True
         return False
+
+    @field_validator("serial_numbers", mode="before")
+    @classmethod
+    def parse_serial_numbers(cls, v: object) -> Optional[List[str]]:
+        if v is None:
+            return None
+        if isinstance(v, list):
+            return v
+        if isinstance(v, str):
+            try:
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    return parsed
+            except json.JSONDecodeError:
+                pass
+            # Если это строка через запятую
+            return [s.strip() for s in v.split(",") if s.strip()]
+        return None
 
 
 class TicketListQuery(BaseModel):

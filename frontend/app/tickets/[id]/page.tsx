@@ -242,6 +242,84 @@ export default function TicketDetailPage() {
           </dl>
         </Card>
 
+        {/* ЭРИС: Извлечённые данные */}
+        {(ticket.sender_full_name || ticket.object_name || ticket.device_type || ticket.sentiment || ticket.request_category) && (
+          <Card className="p-6 bg-white/90 backdrop-blur-md border-white/50 shadow-xl">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                </svg>
+              </div>
+              <h2 className="text-lg font-bold text-slate-800">Извлечённые данные (AI)</h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {ticket.sender_full_name && (
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">ФИО</p>
+                  <p className="text-sm font-medium text-slate-800">{ticket.sender_full_name}</p>
+                </div>
+              )}
+              {ticket.object_name && (
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Организация</p>
+                  <p className="text-sm font-medium text-slate-800">{ticket.object_name}</p>
+                </div>
+              )}
+              {ticket.sender_phone && (
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Телефон</p>
+                  <p className="text-sm font-medium text-slate-800">{ticket.sender_phone}</p>
+                </div>
+              )}
+              {ticket.device_type && (
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Тип прибора</p>
+                  <p className="text-sm font-medium text-slate-800">{ticket.device_type}</p>
+                </div>
+              )}
+              {ticket.serial_numbers && ticket.serial_numbers.length > 0 && (
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Заводские номера</p>
+                  <div className="flex flex-wrap gap-1">
+                    {ticket.serial_numbers.map((sn, i) => (
+                      <span key={i} className="inline-block px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-mono">
+                        {sn}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {ticket.sentiment && (
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Тональность</p>
+                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                    ticket.sentiment === 'positive' ? 'bg-green-100 text-green-700' :
+                    ticket.sentiment === 'negative' ? 'bg-red-100 text-red-700' :
+                    'bg-slate-100 text-slate-600'
+                  }`}>
+                    {ticket.sentiment === 'positive' && '😊 Позитивная'}
+                    {ticket.sentiment === 'neutral' && '😐 Нейтральная'}
+                    {ticket.sentiment === 'negative' && '😠 Негативная'}
+                  </span>
+                </div>
+              )}
+              {ticket.request_category && (
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Категория запроса</p>
+                  <p className="text-sm font-medium text-slate-800">{ticket.request_category}</p>
+                </div>
+              )}
+            </div>
+            {ticket.issue_summary && (
+              <div className="mt-4 p-4 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100">
+                <p className="text-xs font-semibold text-blue-800 uppercase tracking-wider mb-2">Суть проблемы</p>
+                <p className="text-sm text-blue-700 leading-relaxed">{ticket.issue_summary}</p>
+              </div>
+            )}
+          </Card>
+        )}
+
         {/* Update Form */}
         <Card className="p-6 bg-white/90 backdrop-blur-md border-white/50 shadow-xl">
           <div className="flex items-center gap-3 mb-6">

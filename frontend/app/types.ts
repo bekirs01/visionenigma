@@ -24,6 +24,16 @@ export interface Ticket {
   reply_sent?: boolean | number;
   sent_reply?: string;
   reply_sent_at?: string;
+
+  // ЭРИС: извлечённые данные из писем
+  sender_full_name?: string;      // ФИО отправителя
+  object_name?: string;           // Название предприятия/объекта
+  sender_phone?: string;          // Контактный телефон
+  serial_numbers?: string[];      // Заводские номера приборов
+  device_type?: string;           // Модель или тип устройства
+  sentiment?: 'positive' | 'neutral' | 'negative';  // Эмоциональный окрас
+  issue_summary?: string;         // Краткое описание проблемы
+  request_category?: string;      // Классификация запроса
 }
 
 export interface TicketCreate {

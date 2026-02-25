@@ -46,6 +46,17 @@ class Ticket(Base):
     reply_sent = Column(Integer, nullable=False, default=0)
     sent_reply = Column(Text, nullable=True)
     reply_sent_at = Column(DateTime(timezone=True), nullable=True)
+
+    # ЭРИС: извлечённые данные из писем (AI parsing)
+    sender_full_name = Column(String(255), nullable=True)  # ФИО отправителя
+    object_name = Column(String(500), nullable=True)  # Название предприятия/объекта
+    sender_phone = Column(String(50), nullable=True)  # Контактный телефон
+    serial_numbers = Column(Text, nullable=True)  # Заводские номера приборов (JSON)
+    device_type = Column(String(255), nullable=True)  # Модель или тип устройства
+    sentiment = Column(String(20), nullable=True, index=True)  # positive/neutral/negative
+    issue_summary = Column(Text, nullable=True)  # Краткое описание проблемы
+    request_category = Column(String(100), nullable=True, index=True)  # Классификация запроса
+
     category = relationship("Category", back_populates="tickets")
     messages = relationship("Message", back_populates="ticket", cascade="all, delete-orphan")
     ai_analyses = relationship("AiAnalysis", back_populates="ticket", cascade="all, delete-orphan")

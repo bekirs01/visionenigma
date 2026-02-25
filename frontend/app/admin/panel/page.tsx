@@ -8,6 +8,26 @@ import { Card, Button, Badge, Spinner, Alert } from "@/components/ui";
 import { useI18n } from "@/app/i18n/I18nProvider";
 import type { Ticket, Category } from "@/app/types";
 
+// Компонент для отображения тональности (sentiment)
+function SentimentBadge({ sentiment }: { sentiment?: string }) {
+  if (!sentiment) return <span className="text-slate-400">—</span>;
+
+  const config = {
+    positive: { color: "bg-green-100 text-green-700", icon: "😊", label: "Позитив" },
+    neutral: { color: "bg-slate-100 text-slate-600", icon: "😐", label: "Нейтраль" },
+    negative: { color: "bg-red-100 text-red-700", icon: "😠", label: "Негатив" },
+  };
+
+  const cfg = config[sentiment as keyof typeof config] || config.neutral;
+
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${cfg.color}`}>
+      <span>{cfg.icon}</span>
+      <span>{cfg.label}</span>
+    </span>
+  );
+}
+
 export default function AdminPanelPage() {
   const router = useRouter();
   const { t } = useI18n();
@@ -267,28 +287,34 @@ export default function AdminPanelPage() {
               <table className="w-full">
                 <thead>
                   <tr className="bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200">
-                    <th className="text-left py-4 px-6 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    <th className="text-left py-4 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
                       ID
                     </th>
-                    <th className="text-left py-4 px-6 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    <th className="text-left py-4 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
                       {t("subject")}
                     </th>
-                    <th className="text-left py-4 px-6 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      {t("email")}
+                    <th className="text-left py-4 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                      ФИО
                     </th>
-                    <th className="text-left py-4 px-6 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    <th className="text-left py-4 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                      Организация
+                    </th>
+                    <th className="text-left py-4 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                      Прибор
+                    </th>
+                    <th className="text-left py-4 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                      Тональность
+                    </th>
+                    <th className="text-left py-4 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                      Категория
+                    </th>
+                    <th className="text-left py-4 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
                       {t("status")}
                     </th>
-                    <th className="text-left py-4 px-6 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      {t("category")}
-                    </th>
-                    <th className="text-left py-4 px-6 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      {t("priority")}
-                    </th>
-                    <th className="text-left py-4 px-6 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    <th className="text-left py-4 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
                       {t("createdAt")}
                     </th>
-                    <th className="text-left py-4 px-6 text-xs font-semibold text-slate-600 uppercase tracking-wider w-20"></th>
+                    <th className="text-left py-4 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider w-20"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -297,32 +323,41 @@ export default function AdminPanelPage() {
                       key={ticket.id}
                       className={`border-b border-slate-100 hover:bg-emerald-50/50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}`}
                     >
-                      <td className="py-4 px-6 text-sm text-slate-500 font-mono">
+                      <td className="py-4 px-4 text-sm text-slate-500 font-mono">
                         <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 text-slate-600 font-semibold">
                           {ticket.id}
                         </span>
                       </td>
-                      <td className="py-4 px-6">
-                        <div className="text-sm font-semibold text-slate-800">{ticket.subject}</div>
+                      <td className="py-4 px-4">
+                        <div className="text-sm font-semibold text-slate-800 max-w-[200px] truncate" title={ticket.subject}>
+                          {ticket.subject}
+                        </div>
+                        <div className="text-xs text-slate-500">{ticket.sender_email}</div>
                       </td>
-                      <td className="py-4 px-6 text-sm text-slate-600">
-                        {ticket.sender_email}
+                      <td className="py-4 px-4 text-sm text-slate-600">
+                        {ticket.sender_full_name || "—"}
                       </td>
-                      <td className="py-4 px-6">
+                      <td className="py-4 px-4 text-sm text-slate-600 max-w-[150px] truncate" title={ticket.object_name || ""}>
+                        {ticket.object_name || "—"}
+                      </td>
+                      <td className="py-4 px-4 text-sm text-slate-600">
+                        {ticket.device_type || "—"}
+                      </td>
+                      <td className="py-4 px-4">
+                        <SentimentBadge sentiment={ticket.sentiment} />
+                      </td>
+                      <td className="py-4 px-4 text-sm text-slate-600">
+                        {ticket.request_category || categoryName(ticket.category_id) || "—"}
+                      </td>
+                      <td className="py-4 px-4">
                         <Badge type="status" value={ticket.status} />
                       </td>
-                      <td className="py-4 px-6 text-sm text-slate-600">
-                        {categoryName(ticket.category_id)}
-                      </td>
-                      <td className="py-4 px-6">
-                        <Badge type="priority" value={ticket.priority} />
-                      </td>
-                      <td className="py-4 px-6 text-sm text-slate-500">
+                      <td className="py-4 px-4 text-sm text-slate-500">
                         {ticket.created_at
-                          ? new Date(ticket.created_at).toLocaleString("ru")
+                          ? new Date(ticket.created_at).toLocaleDateString("ru")
                           : "—"}
                       </td>
-                      <td className="py-4 px-6">
+                      <td className="py-4 px-4">
                         <Link
                           href={`/tickets/${ticket.id}`}
                           className="inline-flex items-center gap-1 text-emerald-600 hover:text-emerald-700 font-medium text-sm hover:underline"
