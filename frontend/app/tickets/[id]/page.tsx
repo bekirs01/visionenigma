@@ -4,8 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import type { Ticket, Category, TicketUpdate, AnalyzeResponse, SuggestReplyResponse } from "@/app/types";
-import { Card, Button, Badge, Spinner, Alert } from "@/components/ui";
+import type { Ticket, Category } from "@/app/types";
+import { Card, Button, Badge, Alert } from "@/components/ui";
 import { useI18n } from "@/app/i18n/I18nProvider";
 
 export default function TicketDetailPage() {
@@ -17,14 +17,7 @@ export default function TicketDetailPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [updateForm, setUpdateForm] = useState<TicketUpdate>({});
-  const [saving, setSaving] = useState(false);
-  const [analyzeResult, setAnalyzeResult] = useState<AnalyzeResponse | null>(null);
-  const [suggestResult, setSuggestResult] = useState<SuggestReplyResponse | null>(null);
-  const [analyzeLoading, setAnalyzeLoading] = useState(false);
-  const [suggestLoading, setSuggestLoading] = useState(false);
   const [sendReplyLoading, setSendReplyLoading] = useState(false);
-  const [showSendConfirm, setShowSendConfirm] = useState(false);
   const { t } = useI18n();
 
   useEffect(() => {
@@ -41,14 +34,13 @@ export default function TicketDetailPage() {
     try {
       const data = await api.getTicket(id);
       setTicket(data);
-      setUpdateForm({ status: data.status, priority: data.priority, category_id: data.category_id });
     } catch (e) {
       setError(e instanceof Error ? e.message : t("loadError"));
       setTicket(null);
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, t]);
 
   const loadCategories = useCallback(async () => {
     try {
@@ -67,67 +59,6 @@ export default function TicketDetailPage() {
     if (adminOk) loadTicket();
   }, [adminOk, loadTicket]);
 
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!id) return;
-    setSaving(true);
-    setError(null);
-    try {
-      const updated = await api.updateTicket(id, updateForm);
-      setTicket(updated);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("saveError"));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleAnalyze = async () => {
-    if (!id) return;
-    setAnalyzeLoading(true);
-    setAnalyzeResult(null);
-    setError(null);
-    try {
-      const res = await api.analyzeTicket(id);
-      setAnalyzeResult(res);
-      loadTicket();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("analyzeError"));
-    } finally {
-      setAnalyzeLoading(false);
-    }
-  };
-
-  const handleSuggestReply = async () => {
-    if (!id) return;
-    setSuggestLoading(true);
-    setSuggestResult(null);
-    setError(null);
-    try {
-      const res = await api.suggestReply(id);
-      setSuggestResult(res);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("suggestError"));
-    } finally {
-      setSuggestLoading(false);
-    }
-  };
-
-  const handleAiAnalyze = async () => {
-    if (!id) return;
-    setAnalyzeLoading(true);
-    setError(null);
-    try {
-      await api.aiAnalyze(id);
-      await loadTicket();
-      setShowSendConfirm(true);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("aiError"));
-    } finally {
-      setAnalyzeLoading(false);
-    }
-  };
-
   const handleSendReply = async () => {
     if (!id || !ticket?.ai_reply) return;
     setSendReplyLoading(true);
@@ -135,15 +66,12 @@ export default function TicketDetailPage() {
     try {
       await api.aiSendReply(id, ticket.ai_reply);
       await loadTicket();
-      setShowSendConfirm(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("sendError"));
     } finally {
       setSendReplyLoading(false);
     }
   };
-
-  const categoryName = (cid: number | undefined) => categories.find((c) => c.id === cid)?.name ?? "—";
 
   if (!adminOk) {
     return (
@@ -320,73 +248,7 @@ export default function TicketDetailPage() {
           </Card>
         )}
 
-        {/* Update Form */}
-        <Card className="p-6 bg-white/90 backdrop-blur-md border-white/50 shadow-xl">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-            </div>
-            <h2 className="text-lg font-bold text-slate-800">{t("changeStatusCategory")}</h2>
-          </div>
-          <form onSubmit={handleUpdate} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{t("status")}</label>
-              <select
-                value={updateForm.status ?? ticket.status}
-                onChange={(e) => setUpdateForm((f) => ({ ...f, status: e.target.value }))}
-                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-              >
-                <option value="new">{t("statusNew")}</option>
-                <option value="in_progress">{t("statusInProgress")}</option>
-                <option value="answered">{t("statusAnswered")}</option>
-                <option value="closed">{t("statusClosed")}</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{t("priority")}</label>
-              <select
-                value={updateForm.priority ?? ticket.priority}
-                onChange={(e) => setUpdateForm((f) => ({ ...f, priority: e.target.value }))}
-                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-              >
-                <option value="low">{t("priorityLow")}</option>
-                <option value="medium">{t("priorityMedium")}</option>
-                <option value="high">{t("priorityHigh")}</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{t("category")}</label>
-              <select
-                value={updateForm.category_id ?? ticket.category_id ?? ""}
-                onChange={(e) => setUpdateForm((f) => ({ ...f, category_id: e.target.value ? Number(e.target.value) : undefined }))}
-                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-              >
-                <option value="">—</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="sm:col-span-3">
-              <Button type="submit" variant="primary" disabled={saving} className="shadow-lg shadow-indigo-500/30">
-                {saving ? (
-                  <><div className="w-4 h-4 border-2 border-white/60 border-t-white rounded-full animate-spin" /> {t("saving")}</>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    {t("save")}
-                  </>
-                )}
-              </Button>
-            </div>
-          </form>
-        </Card>
-
-        {/* AI OpenAI */}
+        {/* AI Ответ */}
         <Card className="p-6 bg-white/90 backdrop-blur-md border-white/50 shadow-xl">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
@@ -394,109 +256,57 @@ export default function TicketDetailPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
               </svg>
             </div>
-            <h2 className="text-lg font-bold text-slate-800">AI (OpenAI)</h2>
+            <h2 className="text-lg font-bold text-slate-800">Ответ AI-агента</h2>
           </div>
-          <Button variant="primary" onClick={handleAiAnalyze} disabled={analyzeLoading} className="shadow-lg shadow-purple-500/30" style={{ backgroundColor: '#7c3aed', borderColor: '#7c3aed' }}>
-            {analyzeLoading ? (
-              <><div className="w-4 h-4 border-2 border-white/60 border-t-white rounded-full animate-spin" /> {t("aiAnalyzing")}</>
-            ) : (
-              <>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                {t("aiAnalyze")}
-              </>
-            )}
-          </Button>
-          {(ticket.ai_category || ticket.ai_reply) && (
-            <div className="mt-6 space-y-4">
-              {ticket.ai_category && (
-                <div className="p-4 rounded-xl bg-purple-50 border border-purple-100">
-                  <p className="text-sm font-semibold text-purple-800 mb-1">{t("suggestedCategory")}:</p>
-                  <p className="text-purple-700">{ticket.ai_category}</p>
-                </div>
-              )}
-              {ticket.ai_reply && (
-                <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100">
-                  <p className="text-sm font-semibold text-emerald-800 mb-2">{t("suggestedReply")}:</p>
-                  <pre className="text-sm text-emerald-700 whitespace-pre-wrap leading-relaxed">{ticket.ai_reply}</pre>
-                </div>
-              )}
-              {ticket.ai_reply && showSendConfirm && (
-                <div className="p-4 rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100">
-                  <p className="text-sm font-semibold text-amber-800 mb-3">{t("sendThisReply")}</p>
-                  <div className="flex gap-2">
-                    <Button variant="primary" onClick={handleSendReply} disabled={sendReplyLoading} className="shadow-lg shadow-emerald-500/30" style={{ backgroundColor: '#059669', borderColor: '#059669' }}>
-                      {sendReplyLoading ? (
-                        <><div className="w-4 h-4 border-2 border-white/60 border-t-white rounded-full animate-spin" /> {t("sending")}</>
-                      ) : (
-                        <>
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                          </svg>
-                          {t("sendReply")}
-                        </>
-                      )}
-                    </Button>
-                    <Button variant="secondary" onClick={() => setShowSendConfirm(false)}>
-                      {t("cancel")}
-                    </Button>
-                  </div>
-                </div>
+
+          {ticket.ai_reply ? (
+            <div className="space-y-4">
+              <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100">
+                <p className="text-sm font-semibold text-emerald-800 mb-2">Сгенерированный ответ:</p>
+                <pre className="text-sm text-emerald-700 whitespace-pre-wrap leading-relaxed">{ticket.ai_reply}</pre>
+              </div>
+
+              {!ticket.reply_sent && (
+                <Button
+                  variant="primary"
+                  onClick={handleSendReply}
+                  disabled={sendReplyLoading}
+                  className="shadow-lg shadow-emerald-500/30"
+                  style={{ backgroundColor: '#059669', borderColor: '#059669' }}
+                >
+                  {sendReplyLoading ? (
+                    <><div className="w-4 h-4 border-2 border-white/60 border-t-white rounded-full animate-spin" /> Отправка...</>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                      </svg>
+                      Отправить ответ клиенту
+                    </>
+                  )}
+                </Button>
               )}
             </div>
+          ) : (
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center">
+              <p className="text-slate-500">AI-анализ выполняется автоматически при создании тикета...</p>
+            </div>
           )}
+
           {(ticket.reply_sent || ticket.sent_reply) && (
             <div className="mt-6 p-4 rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200">
               <div className="flex items-center gap-2 mb-2">
                 <svg className="w-5 h-5 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
-                <p className="text-sm font-semibold text-slate-800">{t("replySent")}</p>
+                <p className="text-sm font-semibold text-slate-800">Ответ отправлен</p>
+                {ticket.reply_sent_at && (
+                  <span className="text-xs text-slate-500 ml-auto">
+                    {new Date(ticket.reply_sent_at).toLocaleString("ru")}
+                  </span>
+                )}
               </div>
               <pre className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{ticket.sent_reply || ticket.ai_reply || "—"}</pre>
-            </div>
-          )}
-        </Card>
-
-        {/* AI Mock */}
-        <Card className="p-6 bg-white/90 backdrop-blur-md border-white/50 shadow-xl">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-400 to-slate-600 flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-              </svg>
-            </div>
-            <h2 className="text-lg font-bold text-slate-800">ИИ (mock)</h2>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Button variant="secondary" onClick={handleAnalyze} disabled={analyzeLoading}>
-              {analyzeLoading ? (
-                <><div className="w-4 h-4 border-2 border-slate-400 border-t-slate-600 rounded-full animate-spin" /> {t("analyzing")}</>
-              ) : (
-                t("mockAnalyze")
-              )}
-            </Button>
-            <Button variant="secondary" onClick={handleSuggestReply} disabled={suggestLoading}>
-              {suggestLoading ? (
-                <><div className="w-4 h-4 border-2 border-slate-400 border-t-slate-600 rounded-full animate-spin" /> {t("generating")}</>
-              ) : (
-                t("mockSuggestReply")
-              )}
-            </Button>
-          </div>
-          {analyzeResult && (
-            <div className="mt-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
-              <p className="text-sm font-semibold text-slate-800 mb-1">{t("suggestedCategory")}:</p>
-              <p className="text-slate-700">{analyzeResult.predicted_category} <span className="text-slate-500">(уверенность: {(analyzeResult.confidence * 100).toFixed(0)}%)</span></p>
-              <p className="text-xs text-slate-500 mt-2">provider: {analyzeResult.provider}</p>
-            </div>
-          )}
-          {suggestResult && (
-            <div className="mt-4 p-4 rounded-xl bg-emerald-50 border border-emerald-100">
-              <p className="text-sm font-semibold text-emerald-800 mb-2">{t("suggestedReply")}:</p>
-              <pre className="text-sm text-emerald-700 whitespace-pre-wrap leading-relaxed">{suggestResult.suggested_reply}</pre>
-              <p className="text-xs text-slate-500 mt-2">provider: {suggestResult.provider}</p>
             </div>
           )}
         </Card>

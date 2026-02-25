@@ -1,6 +1,10 @@
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 import os
+from pathlib import Path
+
+# Путь к .env относительно этого файла (app/config.py -> backend/.env)
+ENV_FILE_PATH = Path(__file__).parent.parent / ".env"
 
 
 def _database_url() -> str:
@@ -41,7 +45,7 @@ class Settings(BaseSettings):
     imap_pass: str = ""
 
     class Config:
-        env_file = ".env"
+        env_file = str(ENV_FILE_PATH)
         env_file_encoding = "utf-8"
         extra = "ignore"
 

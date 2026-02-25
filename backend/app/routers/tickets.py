@@ -10,6 +10,8 @@ from app.schemas import TicketCreate, TicketRead, TicketUpdate, AnalyzeResponse,
 from app.repositories.ticket_repo import TicketRepository
 from app.services.mock_ai import MockAIService
 from app.auth import require_admin, require_admin_dep
+from app.services.ai_agent import AIAgent
+from app.config import get_settings
 
 router = APIRouter(prefix="/api", tags=["tickets"])
 
@@ -54,6 +56,23 @@ def create_ticket(data: TicketCreate, db: Session = Depends(get_db)):
     db.add(ticket)
     db.commit()
     db.refresh(ticket)
+
+    # Автоматический AI анализ при создании тикета
+    settings = get_settings()
+    has_key = bool(settings.openai_api_key)
+    print(f"[AI] Тикет #{ticket.id} создан. OpenAI ключ настроен: {has_key}")
+    if has_key:
+        try:
+            agent = AIAgent(db)
+            result = agent.process_ticket(ticket)
+            agent.update_ticket_with_result(ticket, result)
+            db.commit()
+            db.refresh(ticket)
+            print(f"[AI] Автоматический анализ тикета #{ticket.id} завершён")
+        except Exception as e:
+            print(f"[AI] Ошибка автоматического анализа тикета #{ticket.id}: {e}")
+            # Продолжаем без AI анализа - тикет уже создан
+
     return ticket
 
 
