@@ -215,25 +215,45 @@ flowchart LR
 
 ## 12. Инструкция по запуску
 
-### Локально (без Docker)
+### Быстрый старт (рекомендуется)
 
-1. PostgreSQL должен быть запущен (порт 5432), создана БД `support_mvp` (или укажите свою в `DATABASE_URL`).
-2. Скопировать `.env.example` в `.env` и при необходимости поправить переменные.
-3. Backend:
-   ```bash
-   cd backend
-   pip install -r requirements.txt
-   export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/support_mvp
-   alembic upgrade head
-   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-   ```
-4. Frontend (в другом терминале):
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
-5. Открыть http://localhost:3000. Для демо-данных: `curl -X POST http://localhost:8000/api/seed-demo` или кнопка «Seed демо» в UI.
+```bash
+git clone --branch support-mvp https://github.com/bekirs01/visionenigma.git
+cd visionenigma
+
+# Windows:
+setup.bat
+
+# Linux/Mac:
+chmod +x setup.sh && ./setup.sh
+```
+
+Скрипт установит зависимости и запросит OpenAI API ключ для AI-агента.
+
+### Запуск серверов (в двух терминалах)
+
+**Терминал 1 — Backend:**
+```bash
+cd backend
+python -m uvicorn app.main:app --reload --port 8000
+```
+
+**Терминал 2 — Frontend:**
+```bash
+cd frontend
+npm run dev
+```
+
+Открыть http://localhost:3000
+
+### Настройка OpenAI (для AI-агента)
+
+Добавьте в `backend/.env`:
+```
+OPENAI_API_KEY=ваш_ключ
+```
+
+Без ключа AI работает в mock-режиме (шаблонные ответы).
 
 ### Docker
 
