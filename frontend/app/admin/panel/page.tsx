@@ -237,11 +237,9 @@ export default function AdminPanelPage() {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 w-full sm:w-40"
             >
-              <option value="">{t("allStatuses")}</option>
-              <option value="new">{t("statusNew")}</option>
-              <option value="in_progress">{t("statusInProgress")}</option>
-              <option value="answered">{t("statusAnswered")}</option>
-              <option value="closed">{t("statusClosed")}</option>
+              <option value="">Все статусы</option>
+              <option value="not_completed">Не завершён</option>
+              <option value="completed">Завершён</option>
             </select>
             <select
               value={categoryFilter}

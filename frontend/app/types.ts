@@ -24,6 +24,7 @@ export interface Ticket {
   reply_sent?: boolean | number;
   sent_reply?: string;
   reply_sent_at?: string;
+  completed_at?: string;  // Время завершения (для автоудаления через 5 мин)
 
   // ЭРИС: извлечённые данные из писем
   sender_full_name?: string;      // ФИО отправителя

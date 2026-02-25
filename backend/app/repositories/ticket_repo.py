@@ -4,6 +4,13 @@ from sqlalchemy import or_
 from app.models import Ticket
 
 
+# Маппинг новых статусов на legacy статусы для обратной совместимости
+STATUS_MAPPING = {
+    "not_completed": ["not_completed", "new", "in_progress"],
+    "completed": ["completed", "answered", "closed"],
+}
+
+
 class TicketRepository:
     @staticmethod
     def get_list(
@@ -28,7 +35,9 @@ class TicketRepository:
                 )
             )
         if status:
-            q = q.filter(Ticket.status == status)
+            # Используем маппинг для фильтрации по группе статусов
+            statuses = STATUS_MAPPING.get(status, [status])
+            q = q.filter(Ticket.status.in_(statuses))
         if category_id is not None:
             q = q.filter(Ticket.category_id == category_id)
         return q.order_by(Ticket.created_at.desc()).offset(offset).limit(limit).all()

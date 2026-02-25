@@ -1,8 +1,11 @@
+import asyncio
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.db import engine, Base, ensure_db_fallback
 from app import models  # noqa: F401 - tablolar Base.metadata'ya kayıt olsun
 from app.routers import health, categories, tickets, seed, email_stub, ai, admin_auth
+from app.services.ticket_cleanup import start_cleanup_scheduler
 
 app = FastAPI(title="Support MVP API", version="0.1.0")
 
@@ -39,5 +42,7 @@ app.include_router(ai.router)
 
 
 @app.on_event("startup")
-def startup():
+async def startup():
     ensure_db_fallback()
+    # Запускаем фоновую задачу очистки завершённых тикетов
+    asyncio.create_task(start_cleanup_scheduler())

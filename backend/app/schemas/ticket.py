@@ -9,7 +9,7 @@ class TicketBase(BaseModel):
     sender_name: Optional[str] = None
     subject: str
     body: str
-    status: str = "new"
+    status: str = "not_completed"  # Статус по умолчанию: "Не завершён"
     priority: str = "medium"
     category_id: Optional[int] = None
     source: str = "manual"
@@ -39,6 +39,7 @@ class TicketRead(TicketBase):
     reply_sent: bool = False
     sent_reply: Optional[str] = None
     reply_sent_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None  # Время завершения (для автоудаления)
 
     # ЭРИС: извлечённые данные из писем
     sender_full_name: Optional[str] = None

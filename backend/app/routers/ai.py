@@ -107,14 +107,15 @@ def ai_send_reply(
     ticket.sent_reply = reply_text
     ticket.reply_sent = 1
     ticket.reply_sent_at = datetime.now(timezone.utc)
-    ticket.status = "answered"  # Автоматически меняем статус
+    ticket.status = "completed"  # Статус "Завершён"
+    ticket.completed_at = datetime.now(timezone.utc)  # Время завершения для автоудаления
 
     db.commit()
     db.refresh(ticket)
 
     return {
         "ok": True,
-        "message": "Ответ отправлен",
+        "message": "Ответ отправлен. Тикет будет автоматически удалён через 5 минут.",
         "reply_sent_at": ticket.reply_sent_at.isoformat()
     }
 

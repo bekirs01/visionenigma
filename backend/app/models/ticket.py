@@ -6,10 +6,8 @@ import enum
 
 
 class TicketStatus(str, enum.Enum):
-    new = "new"
-    in_progress = "in_progress"
-    answered = "answered"
-    closed = "closed"
+    not_completed = "not_completed"  # Не завершён
+    completed = "completed"  # Завершён (после отправки ответа)
 
 
 class TicketPriority(str, enum.Enum):
@@ -33,7 +31,7 @@ class Ticket(Base):
     sender_name = Column(String(255), nullable=True)
     subject = Column(String(500), nullable=False, index=True)
     body = Column(Text, nullable=False)
-    status = Column(String(50), nullable=False, default="new", index=True)
+    status = Column(String(50), nullable=False, default="not_completed", index=True)
     priority = Column(String(50), nullable=False, default="medium", index=True)
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=True, index=True)
     source = Column(String(50), nullable=False, default="manual", index=True)
@@ -46,6 +44,7 @@ class Ticket(Base):
     reply_sent = Column(Integer, nullable=False, default=0)
     sent_reply = Column(Text, nullable=True)
     reply_sent_at = Column(DateTime(timezone=True), nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)  # Время завершения для автоудаления
 
     # ЭРИС: извлечённые данные из писем (AI parsing)
     sender_full_name = Column(String(255), nullable=True)  # ФИО отправителя
