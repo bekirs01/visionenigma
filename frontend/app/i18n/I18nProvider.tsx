@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import ru from "@/app/locales/ru.json";
 import tr from "@/app/locales/tr.json";
 
@@ -8,13 +8,19 @@ const LANG_KEY = "support_lang";
 type Lang = "ru" | "tr";
 const dicts: Record<Lang, Record<string, string>> = { ru, tr };
 
+const noopT = (key: string) => key;
+
 type ContextValue = {
   lang: Lang;
   setLang: (l: Lang) => void;
   t: (key: string) => string;
 };
 
-const I18nContext = createContext<ContextValue | null>(null);
+const I18nContext = createContext<ContextValue>({
+  lang: "ru",
+  setLang: () => {},
+  t: noopT,
+});
 
 function getInitialLang(): Lang {
   if (typeof window === "undefined") return "ru";
@@ -44,12 +50,18 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     [lang]
   );
 
-  const value = mounted ? { lang, setLang, t } : { lang: "ru" as Lang, setLang, t };
+  const value = useMemo(
+    () => ({ lang: mounted ? lang : ("ru" as Lang), setLang, t: typeof t === "function" ? t : noopT }),
+    [lang, mounted, setLang, t]
+  );
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
 
-export function useI18n() {
+export function useI18n(): ContextValue {
   const ctx = useContext(I18nContext);
-  if (!ctx) return { lang: "ru" as Lang, setLang: () => {}, t: (k: string) => k };
-  return ctx;
+  return {
+    lang: ctx?.lang ?? "ru",
+    setLang: typeof ctx?.setLang === "function" ? ctx.setLang : () => {},
+    t: typeof ctx?.t === "function" ? ctx.t : noopT,
+  };
 }

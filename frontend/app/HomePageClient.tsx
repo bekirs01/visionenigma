@@ -269,27 +269,27 @@ export default function HomePageClient({
                       </tr>
                     </thead>
                     <tbody>
-                      {tickets.map((t) => (
+                      {tickets.map((ticket) => (
                         <tr
-                          key={t.id}
+                          key={ticket.id}
                           className="border-b border-slate-100 hover:bg-slate-50/70 transition-colors"
                         >
-                          <td className="py-3 px-4 text-sm text-slate-500 font-mono">{t.id}</td>
-                          <td className="py-3 px-4 text-sm font-medium text-slate-800">{t.subject}</td>
-                          <td className="py-3 px-4 text-sm text-slate-600">{t.sender_email}</td>
+                          <td className="py-3 px-4 text-sm text-slate-500 font-mono">{ticket.id}</td>
+                          <td className="py-3 px-4 text-sm font-medium text-slate-800">{ticket.subject}</td>
+                          <td className="py-3 px-4 text-sm text-slate-600">{ticket.sender_email}</td>
                           <td className="py-3 px-4">
-                            <Badge type="status" value={t.status}>{t.status}</Badge>
+                            <Badge type="status" value={ticket.status}>{ticket.status}</Badge>
                           </td>
-                          <td className="py-3 px-4 text-sm text-slate-600">{categoryName(t.category_id)}</td>
+                          <td className="py-3 px-4 text-sm text-slate-600">{categoryName(ticket.category_id)}</td>
                           <td className="py-3 px-4">
-                            <Badge type="priority" value={t.priority}>{t.priority}</Badge>
+                            <Badge type="priority" value={ticket.priority}>{ticket.priority}</Badge>
                           </td>
                           <td className="py-3 px-4 text-sm text-slate-500">
-                            {t.created_at ? new Date(t.created_at).toLocaleString("ru") : "—"}
+                            {ticket.created_at ? new Date(ticket.created_at).toLocaleString("ru") : "—"}
                           </td>
                           <td className="py-3 px-4">
                             <Link
-                              href={`/tickets/${t.id}`}
+                              href={`/tickets/${ticket.id}`}
                               className="text-indigo-600 hover:text-indigo-700 font-medium text-sm hover:underline"
                             >
                               {t("open")}
