@@ -47,6 +47,10 @@ export interface TicketCreate {
   category_id?: number;
   source?: string;
   client_token?: string;
+  // ЭРИС: дополнительные поля для формы
+  sender_full_name?: string;
+  sender_phone?: string;
+  object_name?: string;
 }
 
 export interface TicketUpdate {

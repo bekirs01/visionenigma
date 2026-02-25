@@ -17,6 +17,10 @@ class TicketBase(BaseModel):
 
 class TicketCreate(TicketBase):
     client_token: Optional[str] = None
+    # ЭРИС: дополнительные поля для формы
+    sender_full_name: Optional[str] = None
+    sender_phone: Optional[str] = None
+    object_name: Optional[str] = None
 
 
 class TicketUpdate(BaseModel):

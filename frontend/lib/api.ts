@@ -89,6 +89,9 @@ export const api = {
       body: JSON.stringify({ code: code.trim() }),
     }),
 
+  adminLogout: () =>
+    fetchApi<{ ok: boolean }>("/api/admin/logout", { method: "POST" }),
+
   seedDemo: () => fetchApi<{ message: string }>("/api/seed-demo", { method: "POST" }),
 
   /** CSV export: fetch with credentials, then download as blob */

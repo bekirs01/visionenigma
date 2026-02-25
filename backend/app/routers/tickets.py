@@ -53,6 +53,10 @@ def create_ticket(data: TicketCreate, db: Session = Depends(get_db)):
         category_id=data.category_id,
         source=data.source,
         client_token=(data.client_token or "").strip() or None,
+        # ЭРИС: дополнительные поля из формы
+        sender_full_name=data.sender_full_name,
+        sender_phone=data.sender_phone,
+        object_name=data.object_name,
     )
     db.add(ticket)
     db.commit()

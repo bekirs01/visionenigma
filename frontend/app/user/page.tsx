@@ -18,34 +18,119 @@ function getOrCreateClientToken(): string {
   return token;
 }
 
+// Валидация телефона (российский формат)
+function validatePhone(phone: string): boolean {
+  const cleaned = phone.replace(/\D/g, '');
+  return cleaned.length >= 10 && cleaned.length <= 11;
+}
+
+// Форматирование телефона
+function formatPhone(value: string): string {
+  const cleaned = value.replace(/\D/g, '');
+  if (cleaned.length === 0) return '';
+  if (cleaned.length <= 1) return `+7 (${cleaned}`;
+  if (cleaned.length <= 4) return `+7 (${cleaned.slice(1)}`;
+  if (cleaned.length <= 7) return `+7 (${cleaned.slice(1, 4)}) ${cleaned.slice(4)}`;
+  if (cleaned.length <= 9) return `+7 (${cleaned.slice(1, 4)}) ${cleaned.slice(4, 7)}-${cleaned.slice(7)}`;
+  return `+7 (${cleaned.slice(1, 4)}) ${cleaned.slice(4, 7)}-${cleaned.slice(7, 9)}-${cleaned.slice(9, 11)}`;
+}
+
+// Валидация ФИО
+function validateFullName(name: string): boolean {
+  const words = name.trim().split(/\s+/);
+  return words.length >= 2 && words.every(w => w.length >= 2);
+}
+
+// Валидация email
+function validateEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 export default function UserFormPage() {
   const { t } = useI18n();
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [subject, setSubject] = useState("");
+  const [phone, setPhone] = useState("");
   const [message, setMessage] = useState("");
-  const [priority, setPriority] = useState<"low" | "medium" | "high">("medium");
+  const [organization, setOrganization] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
 
+  // Ошибки валидации
+  const [errors, setErrors] = useState<{
+    fullName?: string;
+    email?: string;
+    phone?: string;
+    message?: string;
+  }>({});
+
+  // Проверка всех полей
+  const validateForm = (): boolean => {
+    const newErrors: typeof errors = {};
+
+    if (!fullName.trim()) {
+      newErrors.fullName = "Введите ФИО";
+    } else if (!validateFullName(fullName)) {
+      newErrors.fullName = "Введите имя и фамилию";
+    }
+
+    if (!email.trim()) {
+      newErrors.email = "Введите email";
+    } else if (!validateEmail(email)) {
+      newErrors.email = "Некорректный email";
+    }
+
+    if (!phone.trim()) {
+      newErrors.phone = "Введите номер телефона";
+    } else if (!validatePhone(phone)) {
+      newErrors.phone = "Некорректный номер телефона";
+    }
+
+    if (!message.trim()) {
+      newErrors.message = "Опишите вашу проблему";
+    } else if (message.trim().length < 10) {
+      newErrors.message = "Сообщение слишком короткое (мин. 10 символов)";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhone(e.target.value);
+    setPhone(formatted);
+    if (errors.phone) setErrors(prev => ({ ...prev, phone: undefined }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!validateForm()) return;
+
     setSubmitting(true);
     setError(null);
     try {
       await api.createTicket({
         sender_email: email,
-        subject,
+        sender_name: fullName,
+        subject: `Обращение от ${fullName}`,
         body: message,
-        status: "new",
-        priority,
+        status: "not_completed",
+        priority: "medium",
         source: "manual",
         client_token: getOrCreateClientToken(),
+        // Дополнительные поля для ЭРИС
+        sender_full_name: fullName,
+        sender_phone: phone.replace(/\D/g, ''),
+        object_name: organization || undefined,
       });
       setSent(true);
+      setFullName("");
       setEmail("");
-      setSubject("");
+      setPhone("");
       setMessage("");
+      setOrganization("");
     } catch (e) {
       setError(e instanceof Error ? e.message : t("sendError"));
     } finally {
@@ -107,81 +192,140 @@ export default function UserFormPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            {/* ФИО */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  ФИО <span className="text-red-500">*</span>
+                </div>
+              </label>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => {
+                  setFullName(e.target.value);
+                  if (errors.fullName) setErrors(prev => ({ ...prev, fullName: undefined }));
+                }}
+                placeholder="Иванов Иван Иванович"
+                className={`w-full px-4 py-3 rounded-xl border ${errors.fullName ? 'border-red-400 bg-red-50' : 'border-slate-200 bg-white'} text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all`}
+              />
+              {errors.fullName && (
+                <p className="mt-1.5 text-sm text-red-500 flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  {errors.fullName}
+                </p>
+              )}
+            </div>
+
+            {/* Email */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 <div className="flex items-center gap-2">
                   <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
-                  {t("userFormEmail")}
+                  Email <span className="text-red-500">*</span>
                 </div>
               </label>
               <input
                 type="email"
-                required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (errors.email) setErrors(prev => ({ ...prev, email: undefined }));
+                }}
                 placeholder="example@email.com"
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"
+                className={`w-full px-4 py-3 rounded-xl border ${errors.email ? 'border-red-400 bg-red-50' : 'border-slate-200 bg-white'} text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all`}
               />
+              {errors.email && (
+                <p className="mt-1.5 text-sm text-red-500 flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  {errors.email}
+                </p>
+              )}
             </div>
 
+            {/* Телефон */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 <div className="flex items-center gap-2">
                   <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                   </svg>
-                  {t("userFormSubject")}
+                  Номер телефона <span className="text-red-500">*</span>
                 </div>
               </label>
               <input
-                type="text"
-                required
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                placeholder={t("subjectPlaceholder")}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"
+                type="tel"
+                value={phone}
+                onChange={handlePhoneChange}
+                placeholder="+7 (999) 123-45-67"
+                className={`w-full px-4 py-3 rounded-xl border ${errors.phone ? 'border-red-400 bg-red-50' : 'border-slate-200 bg-white'} text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all`}
               />
+              {errors.phone && (
+                <p className="mt-1.5 text-sm text-red-500 flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  {errors.phone}
+                </p>
+              )}
             </div>
 
+            {/* Сообщение */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 <div className="flex items-center gap-2">
                   <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
-                  {t("userFormMessage")}
+                  Описание проблемы <span className="text-red-500">*</span>
                 </div>
               </label>
               <textarea
-                required
                 rows={5}
                 value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder={t("userFormPlaceholder")}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all resize-none"
+                onChange={(e) => {
+                  setMessage(e.target.value);
+                  if (errors.message) setErrors(prev => ({ ...prev, message: undefined }));
+                }}
+                placeholder="Подробно опишите вашу проблему или вопрос..."
+                className={`w-full px-4 py-3 rounded-xl border ${errors.message ? 'border-red-400 bg-red-50' : 'border-slate-200 bg-white'} text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all resize-none`}
               />
+              {errors.message && (
+                <p className="mt-1.5 text-sm text-red-500 flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  {errors.message}
+                </p>
+              )}
             </div>
 
+            {/* Организация (необязательное) */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 <div className="flex items-center gap-2">
                   <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                   </svg>
-                  {t("priority")}
+                  Организация <span className="text-slate-400 text-xs">(необязательно)</span>
                 </div>
               </label>
-              <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as "low" | "medium" | "high")}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-700 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"
-              >
-                <option value="low">{t("priorityLow")}</option>
-                <option value="medium">{t("priorityMedium")}</option>
-                <option value="high">{t("priorityHigh")}</option>
-              </select>
+              <input
+                type="text"
+                value={organization}
+                onChange={(e) => setOrganization(e.target.value)}
+                placeholder="Название предприятия или объекта"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"
+              />
             </div>
 
             <Button
