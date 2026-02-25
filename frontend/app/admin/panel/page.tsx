@@ -42,6 +42,17 @@ export default function AdminPanelPage() {
   const [seedLoading, setSeedLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
 
+  // ЭРИС категории запросов (определяются AI)
+  const erisCategories = [
+    { value: "неисправность", label: "Неисправность" },
+    { value: "калибровка", label: "Калибровка" },
+    { value: "запрос_документации", label: "Запрос документации" },
+    { value: "гарантия", label: "Гарантия" },
+    { value: "замена_датчика", label: "Замена датчика" },
+    { value: "консультация", label: "Консультация" },
+    { value: "другое", label: "Другое" },
+  ];
+
   useEffect(() => {
     api
       .adminCheck()
@@ -56,7 +67,7 @@ export default function AdminPanelPage() {
       const data = await api.getTickets({
         search: search || undefined,
         status: statusFilter || undefined,
-        category_id: categoryFilter ? Number(categoryFilter) : undefined,
+        request_category: categoryFilter || undefined,
         limit: 100,
       });
       setTickets(data);
@@ -244,12 +255,12 @@ export default function AdminPanelPage() {
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 w-full sm:w-40"
+              className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 w-full sm:w-48"
             >
-              <option value="">{t("allCategories")}</option>
-              {categories.map((c) => (
-                <option key={c.id} value={String(c.id)}>
-                  {c.name}
+              <option value="">Все категории</option>
+              {erisCategories.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
                 </option>
               ))}
             </select>

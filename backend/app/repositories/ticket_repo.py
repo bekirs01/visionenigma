@@ -18,6 +18,7 @@ class TicketRepository:
         search: Optional[str] = None,
         status: Optional[str] = None,
         category_id: Optional[int] = None,
+        request_category: Optional[str] = None,
         client_token: Optional[str] = None,
         limit: int = 50,
         offset: int = 0,
@@ -40,4 +41,7 @@ class TicketRepository:
             q = q.filter(Ticket.status.in_(statuses))
         if category_id is not None:
             q = q.filter(Ticket.category_id == category_id)
+        if request_category:
+            # Фильтр по категории запроса (ЭРИС AI)
+            q = q.filter(Ticket.request_category == request_category)
         return q.order_by(Ticket.created_at.desc()).offset(offset).limit(limit).all()

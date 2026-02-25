@@ -22,6 +22,7 @@ def list_tickets(
     search: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     category_id: Optional[int] = Query(None),
+    request_category: Optional[str] = Query(None),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     client_token: Optional[str] = Query(None, alias="client_token"),
@@ -31,12 +32,12 @@ def list_tickets(
     token = client_token or x_client_token
     if require_admin(request):
         repo = TicketRepository()
-        tickets = repo.get_list(db, search=search, status=status, category_id=category_id, client_token=None, limit=limit, offset=offset)
+        tickets = repo.get_list(db, search=search, status=status, category_id=category_id, request_category=request_category, client_token=None, limit=limit, offset=offset)
         return tickets
     if not token or not token.strip():
         raise HTTPException(status_code=400, detail="Для просмотра обращений укажите client_token (query или заголовок X-Client-Token)")
     repo = TicketRepository()
-    tickets = repo.get_list(db, search=search, status=status, category_id=category_id, client_token=token.strip(), limit=limit, offset=offset)
+    tickets = repo.get_list(db, search=search, status=status, category_id=category_id, request_category=request_category, client_token=token.strip(), limit=limit, offset=offset)
     return tickets
 
 

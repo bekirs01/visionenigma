@@ -34,11 +34,12 @@ export const api = {
 
   getCategories: () => fetchApi<import("@/app/types").Category[]>("/api/categories"),
 
-  getTickets: (params?: { search?: string; status?: string; category_id?: number; limit?: number; offset?: number }, clientToken?: string) => {
+  getTickets: (params?: { search?: string; status?: string; category_id?: number; request_category?: string; limit?: number; offset?: number }, clientToken?: string) => {
     const sp = new URLSearchParams();
     if (params?.search) sp.set("search", params.search);
     if (params?.status) sp.set("status", params.status);
     if (params?.category_id != null) sp.set("category_id", String(params.category_id));
+    if (params?.request_category) sp.set("request_category", params.request_category);
     if (params?.limit) sp.set("limit", String(params.limit));
     if (params?.offset) sp.set("offset", String(params.offset));
     if (clientToken) sp.set("client_token", clientToken);

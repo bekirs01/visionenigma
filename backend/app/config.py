@@ -2,9 +2,15 @@ from pydantic_settings import BaseSettings
 from functools import lru_cache
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Путь к .env относительно этого файла (app/config.py -> backend/.env)
 ENV_FILE_PATH = Path(__file__).parent.parent / ".env"
+
+# Явно загружаем .env файл
+if ENV_FILE_PATH.exists():
+    load_dotenv(ENV_FILE_PATH, override=True)
+    print(f"[Config] Загружен .env из {ENV_FILE_PATH}")
 
 
 def _database_url() -> str:
