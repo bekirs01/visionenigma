@@ -13,36 +13,49 @@ if exist "backend\.env" (
 )
 
 :: Create .env
-echo [1/3] Creating backend\.env...
+echo [1/4] Creating backend\.env...
 (
 echo DATABASE_URL=postgresql://postgres.fmupjxthdraqogfeokyj:Enigma2026Hack@aws-1-eu-west-1.pooler.supabase.com:5432/postgres
 echo AI_PROVIDER=openai
-echo EMAIL_MODE=mock
+echo EMAIL_MODE=smtp
 echo ADMIN_ACCESS_CODE=admin123
 echo OPENAI_MODEL=gpt-4o-mini
+echo SMTP_HOST=smtp.gmail.com
+echo SMTP_PORT=465
 ) > backend\.env
 
 :: Ask for OpenAI key
 echo.
-set /p OPENAI_KEY="Enter OpenAI API key (or press Enter to skip): "
+echo === OpenAI API Key ===
+set /p OPENAI_KEY="Enter OpenAI API key: "
 if not "%OPENAI_KEY%"=="" (
     echo OPENAI_API_KEY=%OPENAI_KEY%>> backend\.env
     echo [OK] OpenAI key added
 ) else (
     echo OPENAI_API_KEY=>> backend\.env
-    echo [!] OpenAI key skipped - AI will use mock responses
+    echo [!] Warning: AI features will not work without API key
 )
+
+:: Ask for Gmail credentials
+echo.
+echo === Gmail SMTP (for sending replies) ===
+set /p SMTP_USER="Enter Gmail address: "
+set /p SMTP_PASS="Enter Gmail App Password (16 chars, no spaces): "
+echo SMTP_USER=%SMTP_USER%>> backend\.env
+echo SMTP_PASS=%SMTP_PASS%>> backend\.env
+echo SMTP_FROM=%SMTP_USER%>> backend\.env
+echo [OK] Gmail SMTP configured
 
 :DEPS
 :: Install dependencies
 echo.
-echo [2/3] Installing backend dependencies...
+echo [2/4] Installing backend dependencies...
 cd backend
 pip install -r requirements.txt -q
 cd ..
 
 echo.
-echo [3/3] Installing frontend dependencies...
+echo [3/4] Installing frontend dependencies...
 cd frontend
 call npm install --silent
 cd ..
