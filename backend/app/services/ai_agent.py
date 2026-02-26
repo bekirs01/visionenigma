@@ -8,7 +8,8 @@ from dataclasses import dataclass, asdict
 from sqlalchemy.orm import Session
 
 from app.services.kb_search import KBSearchService, get_kb_context
-from app.services.openai_service import analyze_eris_email, ErisAnalysisResult
+from app.services.openai_service import analyze_eris_email, ErisAnalysisResult, ALLOWED_CATEGORIES
+from app.services.device_extract import extract_device_model
 
 
 @dataclass
@@ -28,6 +29,10 @@ class AIAgentResult:
 
     # Ответ
     reply: str = ""
+
+    # Требуется оператор
+    operator_required: bool = False
+    operator_reason: Optional[str] = None
 
     # Метаданные
     kb_articles_used: int = 0
@@ -97,6 +102,8 @@ class AIAgent:
                 request_category=eris_result.request_category,
                 issue_summary=eris_result.issue_summary,
                 reply=eris_result.reply,
+                operator_required=eris_result.operator_required,
+                operator_reason=eris_result.operator_reason,
                 kb_articles_used=kb_articles_used,
                 confidence=0.85 if kb_articles_used > 0 else 0.6
             )
@@ -136,16 +143,27 @@ class AIAgent:
             ticket: Объект Ticket
             result: AIAgentResult
         """
-        ticket.sender_full_name = result.sender_full_name
-        ticket.object_name = result.object_name
-        ticket.sender_phone = result.sender_phone
+        # Formdan gelen FIO/telefon/organizasyonu koru; AI sadece boşsa doldursun
+        if not (ticket.sender_full_name or "").strip() and result.sender_full_name:
+            ticket.sender_full_name = result.sender_full_name
+        if not (ticket.object_name or "").strip() and result.object_name:
+            ticket.object_name = result.object_name
+        if not (ticket.sender_phone or "").strip() and result.sender_phone:
+            ticket.sender_phone = result.sender_phone
         ticket.serial_numbers = json.dumps(result.serial_numbers) if result.serial_numbers else None
-        ticket.device_type = result.device_type
+        # Прибор: сначала regex по тексту, затем AI (без выдумывания)
+        extracted = extract_device_model((ticket.subject or "") + "\n" + (ticket.body or ""))
+        ticket.device_type = (extracted or (result.device_type or "").strip() or None)
+        if ticket.device_type and len(ticket.device_type) > 60:
+            ticket.device_type = ticket.device_type[:60]
         ticket.sentiment = result.sentiment
-        ticket.request_category = result.request_category
+        req_cat = (result.request_category or "").strip()
+        ticket.request_category = req_cat if req_cat in ALLOWED_CATEGORIES else "другое"
         ticket.issue_summary = result.issue_summary
         ticket.ai_reply = result.reply
         ticket.ai_category = self._map_category(result.request_category)
+        ticket.operator_required = result.operator_required
+        ticket.operator_reason = (result.operator_reason or "").strip() or None
 
     def _generate_fallback_reply(self) -> str:
         """Генерирует стандартный ответ при ошибке."""

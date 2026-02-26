@@ -24,15 +24,16 @@ export default function TicketDetailPage() {
     api
       .adminCheck()
       .then(() => setAdminOk(true))
-      .catch(() => router.replace("/admin/login"));
-  }, [router]);
+      .catch(() => setAdminOk(false));
+  }, []);
 
   const loadTicket = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     setError(null);
     try {
-      const data = await api.getTicket(id);
+      const clientToken = typeof window !== "undefined" ? localStorage.getItem("support_client_token") : null;
+      const data = await api.getTicket(id, clientToken ?? undefined);
       setTicket(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("loadError"));
@@ -140,9 +141,17 @@ export default function TicketDetailPage() {
 
         {/* Ticket Info */}
         <Card className="p-6 bg-white/90 backdrop-blur-md border-white/50 shadow-xl">
-          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+          <div className="flex flex-wrap items-center gap-3 mb-6 pb-4 border-b border-slate-100">
             <Badge type="status" value={ticket.status} />
             <Badge type="priority" value={ticket.priority} />
+            {Boolean(ticket.operator_required) && (
+              <span
+                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-100 whitespace-nowrap"
+                title={ticket.operator_reason || "Запрос требует вмешательства специалиста."}
+              >
+                Требуется оператор
+              </span>
+            )}
             <span className="text-sm text-slate-500 ml-auto">
               {ticket.created_at ? new Date(ticket.created_at).toLocaleString("ru") : "—"}
             </span>

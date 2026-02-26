@@ -3,7 +3,7 @@ import hmac
 import hashlib
 import base64
 import time
-from typing import Optional
+from typing import Optional, Tuple
 from fastapi import Request, HTTPException, Depends
 from fastapi.responses import JSONResponse
 from app.config import get_settings
@@ -16,7 +16,7 @@ def _sign(value: str, secret: str) -> str:
     return hmac.new(secret.encode(), value.encode(), hashlib.sha256).hexdigest()
 
 
-def create_admin_cookie(secret: str) -> tuple[str, str]:
+def create_admin_cookie(secret: str) -> Tuple[str, str]:
     """Возвращает (value, signed_value) для cookie."""
     ts = str(int(time.time()))
     sig = _sign(ts, secret)

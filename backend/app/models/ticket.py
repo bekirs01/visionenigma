@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db import Base
@@ -55,6 +55,13 @@ class Ticket(Base):
     sentiment = Column(String(20), nullable=True, index=True)  # positive/neutral/negative
     issue_summary = Column(Text, nullable=True)  # Краткое описание проблемы
     request_category = Column(String(100), nullable=True, index=True)  # Классификация запроса
+
+    # Требуется оператор (вмешательство специалиста)
+    operator_required = Column(Boolean, nullable=False, default=False)
+    operator_reason = Column(Text, nullable=True)
+
+    # Устройство: desktop/mobile + краткий user-agent (только при создании с фронта)
+    device_info = Column(Text, nullable=True)
 
     category = relationship("Category", back_populates="tickets")
     messages = relationship("Message", back_populates="ticket", cascade="all, delete-orphan")

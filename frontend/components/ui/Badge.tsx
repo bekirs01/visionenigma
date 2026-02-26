@@ -1,13 +1,13 @@
 import { ReactNode } from "react";
 
 const statusStyles: Record<string, string> = {
-  completed: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  not_completed: "bg-amber-100 text-amber-800 border-amber-200",
+  completed: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  not_completed: "bg-amber-50 text-amber-700 border-amber-200",
   // legacy support
-  new: "bg-amber-100 text-amber-800 border-amber-200",
-  in_progress: "bg-amber-100 text-amber-800 border-amber-200",
-  answered: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  closed: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  new: "bg-amber-50 text-amber-700 border-amber-200",
+  in_progress: "bg-amber-50 text-amber-700 border-amber-200",
+  answered: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  closed: "bg-emerald-100 text-emerald-700 border-emerald-200",
 };
 
 const statusLabels: Record<string, string> = {
@@ -47,7 +47,7 @@ export function Badge({
 
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${style} ${className}`}
+      className={`inline-flex items-center px-2 py-px rounded-full text-[10px] font-medium border whitespace-nowrap leading-none ${style} ${className}`}
     >
       {displayText}
     </span>

@@ -5,19 +5,30 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { Card, Button, Badge, Spinner, Alert } from "@/components/ui";
 import { useI18n } from "@/app/i18n/I18nProvider";
-import type { Ticket, Category } from "@/app/types";
+import type { Ticket } from "@/app/types";
 
-const CLIENT_TOKEN_KEY = "support_client_token";
+const CLIENT_TOKEN_KEY = "client_token";
 
-function getClientToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem(CLIENT_TOKEN_KEY);
+function getOrCreateClientToken(): string {
+  if (typeof window === "undefined") return "";
+  let token = localStorage.getItem(CLIENT_TOKEN_KEY);
+  if (!token) {
+    const legacy = localStorage.getItem("support_client_token");
+    if (legacy) {
+      token = legacy;
+      localStorage.setItem(CLIENT_TOKEN_KEY, token);
+    }
+    if (!token) {
+      token = crypto.randomUUID?.() ?? `ct-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+      localStorage.setItem(CLIENT_TOKEN_KEY, token);
+    }
+  }
+  return token;
 }
 
 export default function UserTicketsPage() {
   const { t } = useI18n();
   const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,38 +36,20 @@ export default function UserTicketsPage() {
     setLoading(true);
     setError(null);
     try {
-      const clientToken = getClientToken();
-      if (!clientToken) {
-        setError(t("noClientToken"));
-        setTickets([]);
-        return;
-      }
+      const clientToken = getOrCreateClientToken();
       const data = await api.getTickets({ limit: 100 }, clientToken);
-      setTickets(data);
+      setTickets(data ?? []);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("loadError"));
       setTickets([]);
     } finally {
       setLoading(false);
     }
-  }, []);
-
-  const loadCategories = useCallback(async () => {
-    try {
-      const data = await api.getCategories();
-      setCategories(data);
-    } catch {
-      setCategories([]);
-    }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
-    loadCategories();
     loadTickets();
-  }, [loadTickets, loadCategories]);
-
-  const categoryName = (id: number | undefined) =>
-    categories.find((c) => c.id === id)?.name ?? "—";
+  }, [loadTickets]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 overflow-hidden">
@@ -102,7 +95,7 @@ export default function UserTicketsPage() {
           </Alert>
         )}
 
-        <Card className="overflow-hidden bg-white/90 backdrop-blur-md border-white/50 shadow-xl">
+        <Card className="overflow-hidden bg-white/90 backdrop-blur-md border border-slate-200/80 shadow-md rounded-2xl">
           {loading ? (
             <div className="p-16 flex flex-col items-center justify-center gap-4 text-slate-500">
               <div className="relative">
@@ -133,62 +126,47 @@ export default function UserTicketsPage() {
               <table className="w-full">
                 <thead>
                   <tr className="bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200">
-                    <th className="text-left py-4 px-6 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      ID
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider w-12">
+                      №
                     </th>
-                    <th className="text-left py-4 px-6 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
                       {t("subject")}
                     </th>
-                    <th className="text-left py-4 px-6 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
                       {t("status")}
                     </th>
-                    <th className="text-left py-4 px-6 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      {t("category")}
-                    </th>
-                    <th className="text-left py-4 px-6 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      {t("priority")}
-                    </th>
-                    <th className="text-left py-4 px-6 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
                       {t("createdAt")}
                     </th>
-                    <th className="text-left py-4 px-6 text-xs font-semibold text-slate-600 uppercase tracking-wider w-20"></th>
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider w-28"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {tickets.map((ticket, index) => (
                     <tr
                       key={ticket.id}
-                      className={`border-b border-slate-100 hover:bg-indigo-50/50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}`}
+                      className={`border-b border-slate-100 hover:bg-slate-50/80 transition-colors ${index % 2 === 0 ? "bg-white" : "bg-slate-50/30"}`}
                     >
-                      <td className="py-4 px-6 text-sm text-slate-500 font-mono">
-                        <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 text-slate-600 font-semibold">
-                          {ticket.id}
-                        </span>
+                      <td className="py-3 px-4 text-sm text-slate-500 tabular-nums">
+                        {index + 1}
                       </td>
-                      <td className="py-4 px-6">
+                      <td className="py-3 px-4">
                         <div className="text-sm font-semibold text-slate-800">{ticket.subject}</div>
-                        <div className="text-xs text-slate-500">{ticket.sender_email}</div>
                       </td>
-                      <td className="py-4 px-6">
+                      <td className="py-3 px-4">
                         <Badge type="status" value={ticket.status} />
                       </td>
-                      <td className="py-4 px-6 text-sm text-slate-600">
-                        {categoryName(ticket.category_id)}
-                      </td>
-                      <td className="py-4 px-6">
-                        <Badge type="priority" value={ticket.priority} />
-                      </td>
-                      <td className="py-4 px-6 text-sm text-slate-500">
+                      <td className="py-3 px-4 text-sm text-slate-500">
                         {ticket.created_at
                           ? new Date(ticket.created_at).toLocaleString("ru")
                           : "—"}
                       </td>
-                      <td className="py-4 px-6">
+                      <td className="py-3 px-4">
                         <Link
-                          href={`/tickets/${ticket.id}`}
-                          className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-700 font-medium text-sm hover:underline"
+                          href={`/user/tickets/${ticket.id}`}
+                          className="inline-flex items-center gap-1.5 text-indigo-600 hover:text-indigo-700 font-medium text-sm"
                         >
-                          {t("open")}
+                          Детали
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                           </svg>

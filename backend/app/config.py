@@ -4,13 +4,18 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Путь к .env относительно этого файла (app/config.py -> backend/.env)
-ENV_FILE_PATH = Path(__file__).parent.parent / ".env"
+# Repo root .env (backend/app/config.py -> backend -> root)
+_ROOT_DIR = Path(__file__).resolve().parent.parent.parent
+ROOT_ENV = _ROOT_DIR / ".env"
+# Backend .env (opsiyonel, override için)
+_BACKEND_DIR = Path(__file__).resolve().parent.parent
+ENV_FILE_PATH = _BACKEND_DIR / ".env"
 
-# Явно загружаем .env файл
+# Önce root .env, sonra backend/.env (varsa override)
+if ROOT_ENV.exists():
+    load_dotenv(ROOT_ENV, override=False)
 if ENV_FILE_PATH.exists():
     load_dotenv(ENV_FILE_PATH, override=True)
-    print(f"[Config] Загружен .env из {ENV_FILE_PATH}")
 
 
 def _database_url() -> str:
@@ -51,7 +56,7 @@ class Settings(BaseSettings):
     imap_pass: str = ""
 
     class Config:
-        env_file = str(ENV_FILE_PATH)
+        env_file = str(ROOT_ENV) if ROOT_ENV.exists() else str(ENV_FILE_PATH)
         env_file_encoding = "utf-8"
         extra = "ignore"
 

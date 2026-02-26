@@ -11,6 +11,7 @@ from app.repositories.ticket_repo import TicketRepository
 from app.services.mock_ai import MockAIService
 from app.auth import require_admin, require_admin_dep
 from app.services.ai_agent import AIAgent
+from app.services.device_extract import extract_device_model
 from app.config import get_settings
 
 router = APIRouter(prefix="/api", tags=["tickets"])
@@ -26,23 +27,24 @@ def list_tickets(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     client_token: Optional[str] = Query(None, alias="client_token"),
-    x_client_token: Optional[str] = Header(None),
+    x_client_token: Optional[str] = Header(None, alias="X-Client-Token"),
     db: Session = Depends(get_db),
 ):
-    token = client_token or x_client_token
+    token = (client_token or x_client_token or "").strip()
+    if token:
+        repo = TicketRepository()
+        tickets = repo.get_list(db, search=search, status=status, category_id=category_id, request_category=request_category, client_token=token, limit=limit, offset=offset)
+        return tickets
     if require_admin(request):
         repo = TicketRepository()
         tickets = repo.get_list(db, search=search, status=status, category_id=category_id, request_category=request_category, client_token=None, limit=limit, offset=offset)
         return tickets
-    if not token or not token.strip():
-        raise HTTPException(status_code=400, detail="Для просмотра обращений укажите client_token (query или заголовок X-Client-Token)")
-    repo = TicketRepository()
-    tickets = repo.get_list(db, search=search, status=status, category_id=category_id, request_category=request_category, client_token=token.strip(), limit=limit, offset=offset)
-    return tickets
+    return []
 
 
 @router.post("/tickets", response_model=TicketRead)
 def create_ticket(data: TicketCreate, db: Session = Depends(get_db)):
+    device_from_text = extract_device_model((data.subject or "") + "\n" + (data.body or ""))
     ticket = Ticket(
         sender_email=data.sender_email,
         sender_name=data.sender_name,
@@ -53,10 +55,11 @@ def create_ticket(data: TicketCreate, db: Session = Depends(get_db)):
         category_id=data.category_id,
         source=data.source,
         client_token=(data.client_token or "").strip() or None,
-        # ЭРИС: дополнительные поля из формы
         sender_full_name=data.sender_full_name,
         sender_phone=data.sender_phone,
         object_name=data.object_name,
+        device_info=(data.device_info or "").strip() or None,
+        device_type=device_from_text,
     )
     db.add(ticket)
     db.commit()
@@ -110,7 +113,7 @@ def get_ticket(
     ticket_id: int,
     request: Request,
     client_token: Optional[str] = Query(None),
-    x_client_token: Optional[str] = Header(None),
+    x_client_token: Optional[str] = Header(None, alias="X-Client-Token"),
     db: Session = Depends(get_db),
 ):
     ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
@@ -121,6 +124,22 @@ def get_ticket(
         if not token or ticket.client_token != token:
             raise HTTPException(status_code=403, detail="Нет доступа к этому обращению")
     return ticket
+
+
+@router.delete("/tickets/{ticket_id}")
+def delete_ticket(
+    ticket_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    _admin: bool = Depends(require_admin_dep),
+):
+    """Только админ может удалять тикеты. Пользователь не может удалять."""
+    ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    db.delete(ticket)
+    db.commit()
+    return {"ok": True}
 
 
 @router.patch("/tickets/{ticket_id}", response_model=TicketRead)

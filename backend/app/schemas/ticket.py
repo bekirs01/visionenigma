@@ -17,10 +17,10 @@ class TicketBase(BaseModel):
 
 class TicketCreate(TicketBase):
     client_token: Optional[str] = None
-    # ЭРИС: дополнительные поля для формы
     sender_full_name: Optional[str] = None
     sender_phone: Optional[str] = None
     object_name: Optional[str] = None
+    device_info: Optional[str] = None
 
 
 class TicketUpdate(BaseModel):
@@ -54,9 +54,23 @@ class TicketRead(TicketBase):
     sentiment: Optional[str] = None  # positive / neutral / negative
     issue_summary: Optional[str] = None
     request_category: Optional[str] = None
+    device_info: Optional[str] = None  # desktop/mobile + краткий UA (только админ видит)
+
+    # Требуется оператор (только для админа в UI)
+    operator_required: bool = False
+    operator_reason: Optional[str] = None
 
     class Config:
         from_attributes = True
+
+    @field_validator("operator_required", mode="before")
+    @classmethod
+    def coerce_operator_required(cls, v: object) -> bool:
+        if isinstance(v, bool):
+            return v
+        if v in (1, "1", True, "true"):
+            return True
+        return False
 
     @field_validator("reply_sent", mode="before")
     @classmethod
@@ -84,6 +98,11 @@ class TicketRead(TicketBase):
             # Если это строка через запятую
             return [s.strip() for s in v.split(",") if s.strip()]
         return None
+
+
+class OperatorRequiredUpdate(BaseModel):
+    operator_required: bool
+    operator_reason: Optional[str] = None
 
 
 class TicketListQuery(BaseModel):

@@ -23,9 +23,7 @@ const I18nContext = createContext<ContextValue>({
 });
 
 function getInitialLang(): Lang {
-  if (typeof window === "undefined") return "ru";
-  const s = localStorage.getItem(LANG_KEY);
-  return s === "tr" ? "tr" : "ru";
+  return "ru";
 }
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {

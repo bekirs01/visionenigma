@@ -21,6 +21,8 @@ services:
   backend:
     build: ./backend
     container_name: support_backend
+    env_file:
+      - .env
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/support_mvp
       APP_ENV: development

@@ -6,6 +6,9 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.auth import require_admin_dep
 from app.models import Category, Ticket, KbArticle
+from app.config import get_settings
+from app.services.ai_agent import AIAgent
+from app.services.device_extract import extract_device_model
 
 router = APIRouter(prefix="/api", tags=["seed"])
 
@@ -398,11 +401,15 @@ EMAIL:
     },
 ]
 
-# Демо-тикеты для кейса ЭРИС
+# Демо-тикеты: поля ФИО/Организация/Прибор/device_info заданы, AI заполнит категорию/тон/оператор/ответ
 ERIS_DEMO_TICKETS = [
     {
         "sender_email": "ivanov@neftegaz.ru",
         "sender_name": "Иванов И.И.",
+        "sender_full_name": "Иванов Иван Иванович",
+        "object_name": "Нефтеперерабатывающий завод, г. Уфа",
+        "sender_phone": "+7 (917) 123-45-67",
+        "device_info": "desktop: Chrome / ЭРИС-210",
         "subject": "Ошибка датчика на ЭРИС-210",
         "body": """Добрый день!
 
@@ -419,12 +426,14 @@ ERIS_DEMO_TICKETS = [
 Главный инженер
 Тел: +7 (917) 123-45-67""",
         "priority": "high",
-        "request_category": "неисправность",
-        "sentiment": "negative"
     },
     {
         "sender_email": "petrova@gazprom.ru",
         "sender_name": "Петрова А.С.",
+        "sender_full_name": "Петрова Анна Сергеевна",
+        "object_name": "Компрессорная станция Северная, Ямало-Ненецкий АО",
+        "sender_phone": "8-912-555-00-00",
+        "device_info": "desktop: Firefox / ЭРИС-230",
         "subject": "Запрос на калибровку газоанализаторов",
         "body": """Здравствуйте!
 
@@ -442,12 +451,13 @@ ERIS_DEMO_TICKETS = [
 С уважением,
 Петрова А.С.""",
         "priority": "medium",
-        "request_category": "калибровка",
-        "sentiment": "neutral"
     },
     {
         "sender_email": "sidorov@metrology.ru",
         "sender_name": "Сидоров П.В.",
+        "sender_full_name": "Сидоров Павел Владимирович",
+        "object_name": "ООО Метролаб, аккредитованная лаборатория",
+        "device_info": "desktop: Safari / ЭРИС-210",
         "subject": "Нужна методика поверки МП 242-2019",
         "body": """Добрый день!
 
@@ -460,8 +470,25 @@ ERIS_DEMO_TICKETS = [
 Благодарю,
 Сидоров Павел""",
         "priority": "low",
-        "request_category": "запрос_документации",
-        "sentiment": "neutral"
+    },
+    {
+        "sender_email": "urgent@demo.local",
+        "sender_name": "Демо Срочный",
+        "sender_full_name": "Сидорова Мария Петровна",
+        "object_name": "ООО БезопасностьГаз",
+        "sender_phone": "+7 (495) 111-22-33",
+        "device_info": "mobile: Android / ЭРИС-310",
+        "subject": "СРОЧНО: аварийный простой, нужен оператор",
+        "body": """Внимание! Срочно нужна помощь.
+
+На объекте аварийная ситуация — газоанализаторы ЭРИС-310 показывают превышение. Требуется срочно перезвоните нам, нужен живой оператор для согласования выезда.
+
+Опасность для персонала. Просим связаться в ближайший час.
+
+С уважением,
+Сидорова М.П.
++7 (495) 111-22-33""",
+        "priority": "high",
     },
 ]
 
@@ -493,22 +520,41 @@ def seed_demo(db: Session = Depends(get_db), _admin: bool = Depends(require_admi
             created_articles += 1
     db.commit()
 
-    # 3. Создаём демо-тикеты ЭРИС
+    # 3. Создаём демо-тикеты через тот же pipeline, что и обычные (AI анализ + заполнение полей)
+    settings = get_settings()
+    has_ai = bool(settings.openai_api_key and settings.openai_api_key.strip())
     for t in ERIS_DEMO_TICKETS:
+        subject = t.get("subject", "")
+        body = t.get("body", "")
+        device_from_text = extract_device_model(subject + "\n" + body)
         ticket = Ticket(
             sender_email=t["sender_email"],
             sender_name=t.get("sender_name"),
-            subject=t["subject"],
-            body=t["body"],
-            status="new",
-            priority=t["priority"],
+            subject=subject,
+            body=body,
+            status="not_completed",
+            priority=t.get("priority", "medium"),
             source="email",
-            request_category=t.get("request_category"),
-            sentiment=t.get("sentiment"),
+            client_token=None,
+            sender_full_name=t.get("sender_full_name"),
+            sender_phone=t.get("sender_phone"),
+            object_name=t.get("object_name"),
+            device_info=(t.get("device_info") or "").strip() or None,
+            device_type=device_from_text,
         )
         db.add(ticket)
+        db.commit()
+        db.refresh(ticket)
         created_tickets += 1
-    db.commit()
+        if has_ai:
+            try:
+                agent = AIAgent(db)
+                result = agent.process_ticket(ticket)
+                agent.update_ticket_with_result(ticket, result)
+                db.commit()
+                db.refresh(ticket)
+            except Exception as e:
+                print(f"[Seed demo] AI анализ тикета #{ticket.id} не выполнен: {e}")
 
     return {
         "message": "ЭРИС demo data seeded",

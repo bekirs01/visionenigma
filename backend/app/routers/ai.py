@@ -4,6 +4,7 @@ AI: анализ тикета (OpenAI) и отправка ответа по SMT
 """
 import json
 from datetime import datetime, timezone
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -26,14 +27,14 @@ class AnalyzeResponse(BaseModel):
     """Ответ анализа для ЭРИС"""
     ai_category: str
     ai_reply: str
-    request_category: str | None = None
-    sentiment: str | None = None
-    sender_full_name: str | None = None
-    object_name: str | None = None
-    sender_phone: str | None = None
-    serial_numbers: list[str] | None = None
-    device_type: str | None = None
-    issue_summary: str | None = None
+    request_category: Optional[str] = None
+    sentiment: Optional[str] = None
+    sender_full_name: Optional[str] = None
+    object_name: Optional[str] = None
+    sender_phone: Optional[str] = None
+    serial_numbers: Optional[List[str]] = None
+    device_type: Optional[str] = None
+    issue_summary: Optional[str] = None
 
 
 @router.post("/analyze/{ticket_id}", response_model=AnalyzeResponse)

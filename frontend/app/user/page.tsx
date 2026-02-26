@@ -6,16 +6,32 @@ import { api } from "@/lib/api";
 import { Card, Button, Spinner, Alert } from "@/components/ui";
 import { useI18n } from "@/app/i18n/I18nProvider";
 
-const CLIENT_TOKEN_KEY = "support_client_token";
+const CLIENT_TOKEN_KEY = "client_token";
 
 function getOrCreateClientToken(): string {
   if (typeof window === "undefined") return "";
   let token = localStorage.getItem(CLIENT_TOKEN_KEY);
   if (!token) {
-    token = crypto.randomUUID?.() ?? `ct-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
-    localStorage.setItem(CLIENT_TOKEN_KEY, token);
+    const legacy = localStorage.getItem("support_client_token");
+    if (legacy) {
+      token = legacy;
+      localStorage.setItem(CLIENT_TOKEN_KEY, token);
+    }
+    if (!token) {
+      token = crypto.randomUUID?.() ?? `ct-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+      localStorage.setItem(CLIENT_TOKEN_KEY, token);
+    }
   }
   return token;
+}
+
+function getDeviceInfo(): string {
+  if (typeof navigator === "undefined") return "unknown";
+  const ua = navigator.userAgent || "";
+  const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+  const kind = mobile ? "mobile" : "desktop";
+  const short = ua.slice(0, 80);
+  return `${kind}: ${short}`;
 }
 
 // Валидация телефона (российский формат)
@@ -120,10 +136,10 @@ export default function UserFormPage() {
         priority: "medium",
         source: "manual",
         client_token: getOrCreateClientToken(),
-        // Дополнительные поля для ЭРИС
         sender_full_name: fullName,
         sender_phone: phone.replace(/\D/g, ''),
         object_name: organization || undefined,
+        device_info: getDeviceInfo(),
       });
       setSent(true);
       setFullName("");

@@ -35,6 +35,10 @@ export interface Ticket {
   sentiment?: 'positive' | 'neutral' | 'negative';  // Эмоциональный окрас
   issue_summary?: string;         // Краткое описание проблемы
   request_category?: string;      // Классификация запроса
+
+  operator_required?: boolean;
+  operator_reason?: string | null;
+  device_info?: string | null;
 }
 
 export interface TicketCreate {
@@ -47,10 +51,10 @@ export interface TicketCreate {
   category_id?: number;
   source?: string;
   client_token?: string;
-  // ЭРИС: дополнительные поля для формы
   sender_full_name?: string;
   sender_phone?: string;
   object_name?: string;
+  device_info?: string;
 }
 
 export interface TicketUpdate {

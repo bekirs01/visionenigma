@@ -23,10 +23,17 @@ async function fetchApi<T>(
     const text = await res.text();
     throw new Error(text || `HTTP ${res.status}`);
   }
-  if (res.headers.get("content-type")?.includes("application/json")) {
-    return res.json() as Promise<T>;
+  const contentType = res.headers.get("content-type");
+  const text = await res.text();
+  if (!text || text.trim() === "") return undefined as Promise<T>;
+  if (contentType?.includes("application/json")) {
+    try {
+      return JSON.parse(text) as Promise<T>;
+    } catch {
+      return undefined as Promise<T>;
+    }
   }
-  return res.text() as Promise<T>;
+  return text as Promise<T>;
 }
 
 export const api = {
@@ -48,8 +55,17 @@ export const api = {
   },
 
   getTicket: (id: number, clientToken?: string) => {
-    const q = clientToken ? `?client_token=${encodeURIComponent(clientToken)}` : "";
-    return fetchApi<import("@/app/types").Ticket>(`/api/tickets/${id}${q}`);
+    const sp = new URLSearchParams();
+    if (clientToken) sp.set("client_token", clientToken);
+    const q = sp.toString();
+    return fetchApi<import("@/app/types").Ticket>(`/api/tickets/${id}${q ? `?${q}` : ""}`);
+  },
+
+  deleteTicket: (id: number, clientToken?: string) => {
+    const sp = new URLSearchParams();
+    if (clientToken) sp.set("client_token", clientToken);
+    const q = sp.toString();
+    return fetchApi<{ ok?: boolean } | undefined>(`/api/tickets/${id}${q ? `?${q}` : ""}`, { method: "DELETE" });
   },
 
   createTicket: (data: import("@/app/types").TicketCreate) =>

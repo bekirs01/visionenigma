@@ -21,7 +21,7 @@ function SentimentBadge({ sentiment }: { sentiment?: string }) {
   const cfg = config[sentiment as keyof typeof config] || config.neutral;
 
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${cfg.color}`}>
+    <span className={`inline-flex items-center gap-1 px-2 py-px rounded-full text-[10px] font-medium ${cfg.color}`}>
       <span>{cfg.icon}</span>
       <span>{cfg.label}</span>
     </span>
@@ -42,14 +42,27 @@ export default function AdminPanelPage() {
   const [seedLoading, setSeedLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
 
-  // ЭРИС категории запросов (определяются AI)
-  const erisCategories = [
+  // 20 категорий запросов (whitelist, как в backend)
+  const requestCategories = [
     { value: "неисправность", label: "Неисправность" },
     { value: "калибровка", label: "Калибровка" },
     { value: "запрос_документации", label: "Запрос документации" },
     { value: "гарантия", label: "Гарантия" },
     { value: "замена_датчика", label: "Замена датчика" },
     { value: "консультация", label: "Консультация" },
+    { value: "экзамен", label: "Экзамен / аттестация" },
+    { value: "пересдача", label: "Пересдача" },
+    { value: "оплата", label: "Оплата / счёт" },
+    { value: "договор", label: "Договор" },
+    { value: "возврат", label: "Возврат" },
+    { value: "жалоба", label: "Жалоба" },
+    { value: "срочный_вызов", label: "Срочный вызов" },
+    { value: "монтаж", label: "Монтаж / установка" },
+    { value: "поставка", label: "Поставка / доставка" },
+    { value: "обучение", label: "Обучение" },
+    { value: "сертификация", label: "Сертификация" },
+    { value: "ремонт", label: "Ремонт" },
+    { value: "апгрейд", label: "Апгрейд / модернизация" },
     { value: "другое", label: "Другое" },
   ];
 
@@ -129,6 +142,16 @@ export default function AdminPanelPage() {
   const handleLogout = async () => {
     await api.adminLogout();
     router.replace("/");
+  };
+
+  const handleDeleteTicket = async (ticketId: number) => {
+    if (!confirm(t("confirmDelete") || "Bu talebi silmek istediğinize emin misiniz?")) return;
+    try {
+      await api.deleteTicket(ticketId);
+      setTickets((prev) => prev.filter((t) => t.id !== ticketId));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("loadError"));
+    }
   };
 
   const categoryName = (id: number | undefined) =>
@@ -258,7 +281,7 @@ export default function AdminPanelPage() {
               className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 w-full sm:w-48"
             >
               <option value="">Все категории</option>
-              {erisCategories.map((c) => (
+              {requestCategories.map((c) => (
                 <option key={c.value} value={c.value}>
                   {c.label}
                 </option>
@@ -268,7 +291,7 @@ export default function AdminPanelPage() {
         </Card>
 
         {/* Tickets Table */}
-        <Card className="overflow-hidden bg-white/90 backdrop-blur-md border-white/50 shadow-xl">
+        <Card className="overflow-hidden bg-white/90 backdrop-blur-md border border-slate-200/80 shadow-md rounded-2xl">
           {loading ? (
             <div className="p-16 flex flex-col items-center justify-center gap-4 text-slate-500">
               <div className="relative">
@@ -296,10 +319,10 @@ export default function AdminPanelPage() {
               <table className="w-full">
                 <thead>
                   <tr className="bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200">
-                    <th className="text-left py-4 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      ID
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider w-12">
+                      №
                     </th>
-                    <th className="text-left py-4 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
                       {t("subject")}
                     </th>
                     <th className="text-left py-4 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
@@ -318,55 +341,73 @@ export default function AdminPanelPage() {
                       Категория
                     </th>
                     <th className="text-left py-4 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      {t("status")}
+                      Оператор
                     </th>
                     <th className="text-left py-4 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                      {t("status")}
+                    </th>
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
                       {t("createdAt")}
                     </th>
-                    <th className="text-left py-4 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider w-20"></th>
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider w-28"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {tickets.map((ticket, index) => (
                     <tr
                       key={ticket.id}
-                      className={`border-b border-slate-100 hover:bg-emerald-50/50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}`}
+                      className={`border-b border-slate-100 hover:bg-slate-50/80 transition-colors ${index % 2 === 0 ? "bg-white" : "bg-slate-50/30"}`}
                     >
-                      <td className="py-4 px-4 text-sm text-slate-500 font-mono">
-                        <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 text-slate-600 font-semibold">
-                          {ticket.id}
-                        </span>
+                      <td className="py-3 px-4 text-sm text-slate-500 tabular-nums">
+                        {index + 1}
                       </td>
-                      <td className="py-4 px-4">
-                        <div className="text-sm font-semibold text-slate-800 max-w-[200px] truncate" title={ticket.subject}>
+                      <td className="py-3 px-4">
+                        <div
+                          className="text-sm font-semibold text-slate-800 max-w-[200px] truncate"
+                          title={ticket.device_info ? `${ticket.subject}\nУстройство: ${ticket.device_info}` : ticket.subject}
+                        >
                           {ticket.subject}
                         </div>
                         <div className="text-xs text-slate-500">{ticket.sender_email}</div>
                       </td>
-                      <td className="py-4 px-4 text-sm text-slate-600">
-                        {ticket.sender_full_name || "—"}
+                      <td className="py-3 px-4 text-sm text-slate-600">
+                        {ticket.sender_full_name || ticket.sender_name || "—"}
                       </td>
-                      <td className="py-4 px-4 text-sm text-slate-600 max-w-[150px] truncate" title={ticket.object_name || ""}>
+                      <td className="py-3 px-4 text-sm text-slate-600 max-w-[150px] truncate" title={ticket.object_name || ""}>
                         {ticket.object_name || "—"}
                       </td>
-                      <td className="py-4 px-4 text-sm text-slate-600">
+                      <td className="py-3 px-4 text-sm text-slate-600">
                         {ticket.device_type || "—"}
                       </td>
-                      <td className="py-4 px-4">
+                      <td className="py-3 px-4">
                         <SentimentBadge sentiment={ticket.sentiment} />
                       </td>
-                      <td className="py-4 px-4 text-sm text-slate-600">
+                      <td className="py-3 px-4 text-sm text-slate-600">
                         {ticket.request_category || categoryName(ticket.category_id) || "—"}
                       </td>
-                      <td className="py-4 px-4">
+                      <td className="py-3 px-4">
+                        {Boolean(ticket.operator_required) ? (
+                          <span
+                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-100 whitespace-nowrap"
+                            title={ticket.operator_reason || "Запрос требует вмешательства специалиста."}
+                          >
+                            Требуется оператор
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-50 text-slate-600 border border-slate-100 whitespace-nowrap">
+                            Оператор не требуется
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4">
                         <Badge type="status" value={ticket.status} />
                       </td>
-                      <td className="py-4 px-4 text-sm text-slate-500">
+                      <td className="py-3 px-4 text-sm text-slate-500">
                         {ticket.created_at
                           ? new Date(ticket.created_at).toLocaleDateString("ru")
                           : "—"}
                       </td>
-                      <td className="py-4 px-4">
+                      <td className="py-3 px-4 flex items-center gap-2">
                         <Link
                           href={`/tickets/${ticket.id}`}
                           className="inline-flex items-center gap-1 text-emerald-600 hover:text-emerald-700 font-medium text-sm hover:underline"
@@ -376,6 +417,16 @@ export default function AdminPanelPage() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                           </svg>
                         </Link>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteTicket(ticket.id)}
+                          className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors"
+                          title={t("delete") || "Sil"}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
                       </td>
                     </tr>
                   ))}

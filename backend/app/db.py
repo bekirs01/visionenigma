@@ -65,6 +65,9 @@ def ensure_ticket_ai_columns():
                 ("sent_reply", "ALTER TABLE tickets ADD COLUMN sent_reply TEXT" if is_sqlite else "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS sent_reply TEXT"),
                 ("client_token", "ALTER TABLE tickets ADD COLUMN client_token VARCHAR(64)" if is_sqlite else "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS client_token VARCHAR(64)"),
                 ("reply_sent_at", "ALTER TABLE tickets ADD COLUMN reply_sent_at DATETIME" if is_sqlite else "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS reply_sent_at TIMESTAMP WITH TIME ZONE"),
+                ("operator_required", "ALTER TABLE tickets ADD COLUMN operator_required INTEGER NOT NULL DEFAULT 0" if is_sqlite else "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS operator_required BOOLEAN DEFAULT false"),
+                ("operator_reason", "ALTER TABLE tickets ADD COLUMN operator_reason TEXT" if is_sqlite else "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS operator_reason TEXT"),
+                ("device_info", "ALTER TABLE tickets ADD COLUMN device_info TEXT" if is_sqlite else "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS device_info TEXT"),
             ]
             for col_name, sql in adds:
                 if col_name not in cols:

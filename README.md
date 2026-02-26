@@ -1,321 +1,236 @@
-# Support MVP — AI-помощник обработки писем техподдержки
+# VisionEnigma Support MVP
 
-**Project name / Название проекта:** Support MVP (AI-assisted technical support email processing)
-
----
-
-## 1. Цель MVP
-
-Тестовое задание перед хакатоном: показать понимание архитектуры и заложить рабочий каркас веб-сервиса, где оператор техподдержки будет просматривать обращения (тикеты), категоризировать их с помощью ИИ и получать подсказки ответов. Полноценная разработка (реальная почта, продвинутые модели) планируется на хакатоне.
-
-**Why this prototype exists:** Pre-hackathon deliverable to validate stack, DB schema, API design, and mock user flow without real email/ML dependencies.
+Система технической поддержки с веб-интерфейсом, панелью оператора и автоматическим анализом обращений с помощью ИИ. Интерфейс на русском языке.
 
 ---
 
-## 2. Информация о команде / Team info
+## 1. О проекте
 
-| Поле | Значение |
-|------|----------|
-| **Название команды** | [PLACEHOLDER: название команды] |
-| **Участники и роли** | [PLACEHOLDER: участник 1 — бэкенд, участник 2 — фронтенд, участник 3 — ML, …] |
-| **Тимлид** | [PLACEHOLDER: ФИО, Telegram @nickname] |
+**VisionEnigma Support MVP** — это прототип сервиса обработки обращений в техподдержку. Пользователи создают обращения (тикеты) через веб-форму; оператор просматривает их в админ-панели. При создании тикета запускается анализ текста (категория, тон, необходимость оператора, подсказка ответа); при наличии ключа OpenAI используется реальная модель, иначе — шаблонные ответы.
 
----
+### Основные возможности
 
-## 3. Ссылка на репозиторий
-
-[PLACEHOLDER: https://github.com/your-org/support-mvp]
+- **Пользовательский портал** — форма создания обращения, список «Мои обращения» (по устройству/токену), просмотр деталей своего тикета без доступа к ответам ИИ и админ-инструментам.
+- **Админ-панель** — список всех тикетов, фильтры (поиск, статус, категория), детальная страница с ответом ИИ, меткой «Требуется оператор», экспорт в CSV. Вход по коду доступа.
+- **ИИ-анализ** — извлечение ФИО, организации, телефона, категории запроса (из фиксированного списка), тональности, признака «требуется оператор» и черновика ответа. Опционально — извлечение модели прибора из текста (regex + ИИ).
+- **Демо-данные** — кнопка «Seed демо» в админке создаёт набор тикетов с полным прохождением того же ИИ-пайплайна.
+- **Почта** — в текущей версии в режиме mock (реальный IMAP/SMTP не обязателен; интерфейсы подготовлены для будущего подключения).
 
 ---
 
-## 4. Что реализовано в MVP
-
-- **Backend (FastAPI):** health, CRUD тикетов, категории, mock-анализ категории, mock-подсказка ответа, seed демо-данных, экспорт CSV, заглушки email (import/fetch/send).
-- **Frontend (Next.js):** таблица тикетов, фильтры (поиск, статус, категория), форма добавления тикета, страница детали тикета, обновление статуса/категории, кнопки «Предложить категорию» и «Предложить ответ», экспорт CSV, кнопка «Seed демо».
-- **БД:** PostgreSQL, схема: `categories`, `tickets`, `messages`, `ai_analyses`, `kb_articles`; миграции Alembic.
-- **Инфра:** docker-compose (db + backend + frontend), .env.example, Makefile.
-- **Режим по умолчанию:** mock/manual — без реальной почты и без API-ключей ИИ.
-
----
-
-## 5. Пользовательский путь оператора (User journey)
-
-### MVP (текущий сценарий)
-
-1. Оператор открывает веб-интерфейс (таблицу обращений).
-2. Обращения создаются вручную через форму «Добавить обращение» или подгружаются кнопкой «Seed демо» (реальная почта не подключается).
-3. Оператор фильтрует список по поиску, статусу и категории.
-4. Открывает тикет, просматривает тему, текст, отправителя.
-5. Нажимает «Предложить категорию» — получает mock-категорию и уверенность.
-6. Нажимает «Предложить ответ» — получает шаблонный текст ответа.
-7. Меняет статус/категорию/приоритет и сохраняет.
-8. При необходимости экспортирует таблицу в CSV.
-
-### Будущий сценарий (после интеграции IMAP/SMTP)
-
-1. Письма поступают в ящик техподдержки (IMAP).
-2. Сервис периодически забирает новые письма и создаёт тикеты.
-3. Оператор видит их в той же таблице, анализирует с помощью ИИ, правит ответ и отправляет через SMTP.
-
-Краткая таблица:
-
-| Шаг | MVP | После хакатона |
-|-----|-----|----------------|
-| Поступление обращения | Вручную / Seed | IMAP (авто) |
-| Просмотр | Веб-таблица | Веб-таблица |
-| Категоризация | Mock по ключевым словам | Модель (OpenAI/HF) |
-| Подсказка ответа | Шаблоны | LLM / шаблоны |
-| Отправка ответа | Нет | SMTP |
-
----
-
-## 6. Архитектура системы
-
-Компоненты:
-
-- **Mail intake (приём почты):** сейчас — ручной ввод и seed; в будущем — IMAP-адаптер.
-- **AI-agent:** mock-категоризация и подсказка ответа; позже — OpenAI/HuggingFace.
-- **Knowledge base:** таблица `kb_articles` (заглушка для будущего поиска по базе знаний).
-- **Database:** PostgreSQL (тикеты, сообщения, категории, анализы ИИ, kb_articles).
-- **Web-table / Dashboard:** Next.js — список, фильтры, детали, формы.
-- **Reply sending:** сейчас — только подсказка текста; в будущем — SMTP-адаптер.
-
-Взаимодействие: фронтенд обращается к API бэкенда; бэкенд читает/пишет БД, вызывает mock-ИИ и (в будущем) почтовые адаптеры.
-
-```mermaid
-flowchart LR
-  subgraph External
-    Mail[Почта IMAP]
-    SMTP[SMTP]
-  end
-  subgraph MVP
-    FE[Next.js\nWeb-table]
-    API[FastAPI]
-    DB[(PostgreSQL)]
-    MockAI[Mock AI\nкатегория + ответ]
-  end
-  FE --> API
-  API --> DB
-  API --> MockAI
-  Mail -.->|будущее| API
-  API -.->|будущее| SMTP
-```
-
----
-
-## 7. Структура проекта
+## 2. Структура проекта
 
 ```
-/
-├── README.md
-├── .gitignore
-├── .env.example
-├── docker-compose.yml
-├── Makefile
-├── backend/
-│   ├── Dockerfile
+visionenigma/
+├── backend/                 # Backend (FastAPI)
+│   ├── app/
+│   │   ├── main.py         # Точка входа, CORS, роутеры
+│   │   ├── config.py       # Настройки из .env
+│   │   ├── db.py           # Подключение к БД, миграции при старте
+│   │   ├── models/         # SQLAlchemy-модели (Ticket, Category и др.)
+│   │   ├── schemas/        # Pydantic-схемы для API
+│   │   ├── routers/        # Эндпоинты: tickets, categories, seed, admin, ai
+│   │   ├── services/       # AI-агент, OpenAI, извлечение прибора, почтовые заглушки
+│   │   └── auth.py         # Проверка кода доступа админа
+│   ├── alembic/            # Миграции БД
 │   ├── requirements.txt
-│   ├── alembic.ini
-│   ├── alembic/
-│   │   ├── env.py
-│   │   ├── script.py.mako
-│   │   └── versions/
-│   │       └── 001_initial_schema.py
-│   ├── app/
-│   │   ├── __init__.py
-│   │   ├── main.py
-│   │   ├── config.py
-│   │   ├── db.py
-│   │   ├── models/
-│   │   ├── schemas/
-│   │   ├── routers/
-│   │   ├── services/
-│   │   ├── repositories/
-│   │   ├── core/
-│   │   └── utils/
-│   └── scripts/
-│       └── seed_demo.py
-├── frontend/
 │   ├── Dockerfile
-│   ├── package.json
-│   ├── tsconfig.json
-│   ├── next.config.js
+│   └── .env.example        # ADMIN_ACCESS_CODE, OPENAI_API_KEY и др.
+├── frontend/               # Frontend (Next.js, React, TypeScript, Tailwind)
 │   ├── app/
-│   │   ├── layout.tsx
-│   │   ├── page.tsx
-│   │   ├── globals.css
-│   │   ├── types.ts
-│   │   └── tickets/[id]/page.tsx
-│   └── lib/
-│       └── api.ts
-└── docs/
-    └── (optional architecture.md)
+│   │   ├── page.tsx        # Главная: выбор роли (Пользователь / Админ)
+│   │   ├── user/           # Форма обращения, «Мои обращения», детали тикета
+│   │   ├── admin/          # Вход в админку, панель списка и детали тикета
+│   │   ├── tickets/        # Деталь тикета (админ)
+│   │   └── i18n/           # Локализация (по умолчанию RU)
+│   ├── components/
+│   ├── lib/api.ts          # Клиент API
+│   ├── package.json
+│   ├── Dockerfile
+│   └── .env.example        # NEXT_PUBLIC_API_BASE_URL
+├── .env.example            # Корневой шаблон: БД, OpenAI, порты, почта (mock)
+├── Makefile                # dev-backend, dev-frontend, docker up/down, seed
+├── setup.sh                # Первичная настройка (Linux/macOS)
+├── setup.bat               # Первичная настройка (Windows)
+└── docker-compose.yml      # db (Postgres), backend, frontend
 ```
 
----
-
-## 8. API endpoints
-
-| Метод | Путь | Описание |
-|-------|------|----------|
-| GET | /health | Проверка работы сервиса |
-| GET | /api/categories | Список категорий |
-| POST | /api/categories | Создание категории |
-| GET | /api/tickets | Список тикетов (query: search, status, category_id, limit, offset) |
-| POST | /api/tickets | Создание тикета |
-| GET | /api/tickets/export.csv | Экспорт тикетов в CSV |
-| GET | /api/tickets/{id} | Тикет по ID |
-| PATCH | /api/tickets/{id} | Обновление тикета |
-| POST | /api/tickets/{id}/analyze | Mock-анализ категории |
-| POST | /api/tickets/{id}/suggest-reply | Mock-подсказка ответа |
-| POST | /api/seed-demo | Заполнение демо-данными |
-| POST | /api/email/import-mock | Заглушка импорта |
-| POST | /api/email/fetch | 501 в mock-режиме |
-| POST | /api/email/send | 501 в mock-режиме |
+- **Backend** — FastAPI, SQLAlchemy, Alembic, при необходимости OpenAI. Запуск: `uvicorn app.main:app`.
+- **Frontend** — Next.js 14 (App Router), сборка через **npm** (в проекте используется `package-lock.json`, скрипты в `package.json`: `dev`, `build`, `start`).
+- Конфигурация берётся из корневого `.env` и при необходимости переопределяется в `backend/.env`.
 
 ---
 
-## 9. Схема БД
+## 3. Требования
 
-- **categories:** id, name (unique), description, created_at  
-- **tickets:** id, external_id, sender_email, sender_name, subject, body, status, priority, category_id (FK → categories), source, received_at, created_at, updated_at  
-- **messages:** id, ticket_id (FK → tickets), direction, channel, raw_text, parsed_text, subject, sender_email, recipient_email, created_at  
-- **ai_analyses:** id, ticket_id (FK → tickets), predicted_category, confidence, suggested_reply, provider, model_version, latency_ms, created_at  
-- **kb_articles:** id, title, content, tags, source_url, created_at, updated_at  
-
-Связи: ticket → category (many-to-one), ticket → messages (one-to-many), ticket → ai_analyses (one-to-many).
+- **Python** — 3.11 (указано в `backend/Dockerfile`; для локального запуска желательна совместимая версия).
+- **Node.js** — 20 (указано в `frontend/Dockerfile`; для локального запуска подойдёт LTS).
+- **База данных** — PostgreSQL (например 15). При локальном запуске без Docker можно использовать `USE_SQLITE=1` и SQLite (файл в каталоге backend).
+- **Docker и Docker Compose** — только если запуск планируется через контейнеры.
 
 ---
 
-## 10. Риски и способы минимизации
+## 4. Установка и запуск
 
-| Риск | Митигация |
-|------|-----------|
-| **Нестабильность интеграции с почтой (IMAP/SMTP)** | В MVP почта не используется; интерфейсы и заглушки подготовлены; тесты без реального ящика. |
-| **Качество/задержки ИИ** | Mock-провайдер по умолчанию; абстракция провайдера; на хакатоне — ограничить размер ответа и таймауты. |
-| **Нехватка размеченных данных** | Seed-данные и ключевые слова для демо; на хакатоне — мало-shot промпты или готовые датасеты. |
-| **Нехватка времени на хакатоне** | Чёткий MVP уже поднят; план развития в README; приоритет: один сценарий «приём → ответ». |
-| **Проблемы деплоя** | Docker Compose для локального запуска; один контейнер backend с миграциями при старте. |
-| **Ошибки миграций БД** | Одна начальная миграция Alembic; тестировать миграции до коммита. |
-| **Расхождения контракта FE/BE** | Pydantic и TypeScript-типы; один список эндпоинтов в README. |
-| **Безопасность и приватность** | Нет секретов в коде; .env.example без значений; в прод — HTTPS, ограничение CORS, аудит логов. |
+Команды ниже соответствуют скриптам и целям Makefile в репозитории.
 
----
+### 4.1. Первичная настройка
 
-## 11. План развития на хакатоне (Next steps)
+Перед первым запуском удобно один раз выполнить скрипт установки: он создаёт `.env` из примера (если файла ещё нет) и ставит зависимости backend и frontend.
 
-1. Подключить реальный IMAP (чтение писем) и SMTP (отправка ответов) по флагу/конфигу.  
-2. Интегрировать провайдера ИИ (OpenAI-compatible или Hugging Face) с сохранением mock по умолчанию.  
-3. Улучшить категоризацию и подсказку ответа (prompt engineering или мелкая модель).  
-4. Добавить поиск по базе знаний (kb_articles) для подсказок.  
-5. Улучшить UI: история сообщений по тикету, отправка ответа из интерфейса.  
-6. Опционально: экспорт в XLSX, уведомления.
-
----
-
-## 12. Инструкция по запуску
-
-### Быстрый старт (рекомендуется)
+**macOS / Linux:**
 
 ```bash
-git clone --branch support-mvp https://github.com/bekirs01/visionenigma.git
 cd visionenigma
+chmod +x setup.sh
+./setup.sh
+```
 
-# Windows:
+Скрипт копирует `.env.example` в `.env` в корне проекта и выводит напоминание про настройку `OPENAI_API_KEY` и запуск в двух терминалах.
+
+**Windows (CMD):**
+
+```bash
+cd visionenigma
 setup.bat
-
-# Linux/Mac:
-chmod +x setup.sh && ./setup.sh
 ```
 
-Скрипт установит зависимости и запросит OpenAI API ключ для AI-агента.
+Скрипт делает то же самое: при отсутствии `.env` копирует `.env.example`, устанавливает зависимости backend и frontend и подсказывает команды запуска.
 
-### Запуск серверов (в двух терминалах)
+### 4.2. Запуск без Docker (два терминала)
 
-**Терминал 1 — Backend:**
+Обычно backend и frontend запускают отдельно. В репозитории для этого предусмотрены цели Makefile.
+
+**Терминал 1 — backend:**
+
 ```bash
-cd backend
-python -m uvicorn app.main:app --reload --port 8000
+cd visionenigma
+make dev-backend
 ```
 
-**Терминал 2 — Frontend:**
+Этой командой в каталоге `backend` устанавливаются зависимости (`pip install -r requirements.txt`), выполняются миграции Alembic (`alembic upgrade head`) и запускается сервер:
+
 ```bash
-cd frontend
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Если вы не используете Make, можно выполнить вручную:
+
+```bash
+cd visionenigma/backend
+pip install -r requirements.txt
+alembic upgrade head
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+(На Windows вместо `make dev-backend` — те же три команды по очереди в `backend`.)
+
+**Терминал 2 — frontend:**
+
+```bash
+cd visionenigma
+make dev-frontend
+```
+
+В каталоге `frontend` выполняется `npm install` и `npm run dev`. Вручную:
+
+```bash
+cd visionenigma/frontend
+npm install
 npm run dev
 ```
 
-Открыть http://localhost:3000
+После запуска:
 
-### Настройка OpenAI (для AI-агента)
+- Frontend: **http://localhost:3000**
+- Backend API: **http://localhost:8000**
+- Документация API: **http://localhost:8000/docs**
 
-Добавьте в `backend/.env`:
-```
-OPENAI_API_KEY=ваш_ключ
-```
+### 4.3. Запуск через Docker Compose
 
-Без ключа AI работает в mock-режиме (шаблонные ответы).
+Если нужна полная среда с PostgreSQL в контейнере:
 
-### Docker
+1. В корне проекта создать `.env` (например из `.env.example`).
+2. Запустить сервисы:
 
 ```bash
-cp .env.example .env
+cd visionenigma
 docker-compose up -d
 ```
 
-Миграции выполняются при старте контейнера backend. После запуска:
+В `docker-compose.yml` описаны сервисы: `db` (Postgres 15), `backend` (сборка из `backend/Dockerfile`, при старте — миграции и uvicorn), `frontend` (сборка из `frontend/Dockerfile`, `npm run dev`). Backend читает `DATABASE_URL` вида `postgresql://postgres:postgres@db:5432/support_mvp`.
 
-- Frontend: http://localhost:3000  
-- Backend API: http://localhost:8000  
-- Документация API: http://localhost:8000/docs  
+После поднятия контейнеров адреса те же: frontend — 3000, backend — 8000. Демо-данные можно загрузить так:
 
-Демо-данные: `make seed` или `curl -X POST http://localhost:8000/api/seed-demo`.
+```bash
+make seed
+```
 
----
+или:
 
-## 13. Demo-сценарий для жюри (без реальной почты)
+```bash
+curl -X POST http://localhost:8000/api/seed-demo
+```
 
-1. Запустить проект: `docker-compose up -d` (или локально backend + frontend).  
-2. Открыть http://localhost:3000.  
-3. Нажать «Seed демо» — в таблице появятся несколько тикетов.  
-4. В фильтрах выбрать статус «Новый» или категорию.  
-5. Нажать «Добавить обращение» — заполнить email, тему, текст — создать тикет.  
-6. Открыть любой тикет по ссылке «Открыть».  
-7. Нажать «Предложить категорию» — проверить предсказанную категорию и уверенность.  
-8. Нажать «Предложить ответ» — проверить текст подсказки.  
-9. Изменить статус на «В работе» или категорию и нажать «Сохранить».  
-10. Вернуться к списку, нажать «Экспорт CSV» — проверить выгрузку.  
+(Эндпоинт seed в коде защищён проверкой админ-доступа.)
 
-Реальная почта и API-ключи не требуются.
+### 4.4. Windows: альтернатива без Make
 
----
+На Windows, если `make` не установлен, можно ориентироваться на то, что делает `setup.bat`:
 
-## 14. Обоснование стека (Tech stack rationale)
+- Backend: `cd backend` → `pip install -r requirements.txt` → `alembic upgrade head` → `python -m uvicorn app.main:app --reload --port 8000`.
+- Frontend: `cd frontend` → `npm install` → `npm run dev`.
 
-- **FastAPI:** быстрый старт, автодокументация, Pydantic, асинхронность при необходимости.  
-- **Next.js (App Router) + TypeScript:** единый фронт, SSR при необходимости, типизация.  
-- **PostgreSQL:** надёжная реляционная БД, подходит для тикетов и связей.  
-- **SQLAlchemy + Alembic:** ORM и миграции, привычный стек для Python.  
-- **Docker Compose:** воспроизводимый запуск db + backend + frontend за одну команду.
+Корневой `.env` (или `backend/.env`) должен быть настроен так же, как в разделе про переменные окружения ниже.
 
 ---
 
-## 15. Ограничения MVP
+## 5. Переменные окружения (.env)
 
-- Реальная почта (IMAP/SMTP) не подключена; работа только в режиме mock/manual.  
-- ИИ — детерминированный mock (ключевые слова + шаблоны ответов).  
-- База знаний (kb_articles) не используется в логике, только таблица в БД.  
-- Отправка ответа клиенту из интерфейса не реализована (только подсказка текста).  
-- Нет аутентификации и разграничения прав.  
-- Экспорт только CSV (не XLSX).
+В репозитории есть три примера конфигурации:
+
+- **Корневой `.env.example`** — основной шаблон для запуска (в т.ч. Docker): приложение, БД, фронт, почта, ИИ.
+- **`backend/.env.example`** — код входа в админку и опционально OpenAI/SMTP.
+- **`frontend/.env.example`** — базовый URL API для фронтенда.
+
+Backend загружает переменные сначала из корневого `.env`, затем из `backend/.env` (значения из `backend/.env` имеют приоритет). Имеет смысл не коммитить реальные ключи и пароли: в репозитории лежат только примеры без секретов; локально каждый копирует пример в `.env` и подставляет свои значения.
+
+Основные переменные:
+
+| Переменная | Описание |
+|------------|----------|
+| `DATABASE_URL` | URL подключения к PostgreSQL (при Docker — обычно `postgresql://postgres:postgres@db:5432/support_mvp`). |
+| `USE_SQLITE` | Если задано `1`, используется SQLite вместо PostgreSQL (удобно для локальной разработки без Docker). |
+| `OPENAI_API_KEY` | Ключ OpenAI для ИИ-анализа. Без ключа используются шаблонные ответы. |
+| `ADMIN_ACCESS_CODE` | Код входа в админ-панель (в `backend/.env.example` указан пример). |
+| `NEXT_PUBLIC_API_BASE_URL` | URL бэкенда для фронтенда (например `http://localhost:8000`). |
+
+Остальные (порты, режим почты, IMAP/SMTP и т.д.) описаны в корневом `.env.example` и при необходимости задаются там же.
 
 ---
 
-## 16. Как позже подключить реальную почту
+## 6. Сценарий использования (демо)
 
-В `.env` задать:
+1. **Главная страница** (http://localhost:3000) — выбор роли: «Пользователь» или «Админ».
+2. **Пользователь** — «Создать обращение»: форма (email, тема, текст, ФИО и др.). После отправки тикет попадает в список «Мои обращения» (привязка по токену устройства в браузере). В списке можно открыть детали своего тикета (без ответа ИИ и без админ-функций).
+3. **Админ** — переход к странице входа; после ввода кода доступа открывается панель со списком всех тикетов. Доступны фильтры, колонки (в т.ч. категория, «Требуется оператор», прибор). Открытие тикета показывает детали, ответ ИИ и метку оператора.
+4. **Демо-данные** — в админ-панели кнопка «Seed демо» вызывает `POST /api/seed-demo`. Создаётся набор тикетов, для каждого выполняется тот же ИИ-пайплайн (категория, тон, оператор, ответ и т.д.), так что демо повторяет поведение реальных обращений.
 
-- `EMAIL_MODE=imap_smtp` (или отдельные флаги по необходимости).  
-- IMAP: `IMAP_HOST`, `IMAP_PORT`, `IMAP_USER`, `IMAP_PASS`.  
-- SMTP: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`.  
+---
 
-В коде уже есть интерфейсы `EmailFetcher` и `EmailSender` и заглушки `ImapEmailFetcher`, `SmtpEmailSender`. Достаточно реализовать методы (например, через `imaplib`/`smtplib`) и подключать соответствующий класс в зависимости от `EMAIL_MODE`. Периодическая задача (cron или фоновая job) будет вызывать `fetch_new_messages()` и создавать тикеты через существующий `POST /api/tickets`.
+## 7. Возможные проблемы
+
+- **Порт уже занят** — если 3000 или 8000 заняты, в логах будет ошибка. Можно остановить другой процесс на этом порту или поменять порт в конфигурации/команде запуска.
+- **Файл .env не найден** — скрипты `setup.sh` / `setup.bat` создают `.env` из `.env.example` только при первом запуске. Если файла нет, его можно скопировать вручную из `.env.example` и отредактировать.
+- **Ошибка подключения к БД** — при локальном запуске без Docker проверьте `DATABASE_URL` или включите `USE_SQLITE=1`. При Docker убедитесь, что контейнер `db` запущен и backend обращается к хосту `db` и порту 5432.
+- **ИИ не даёт «живой» ответ** — без корректного `OPENAI_API_KEY` в `.env` backend работает в режиме заглушки (шаблонные ответы). Достаточно задать ключ в корневом `.env` или в `backend/.env` и перезапустить backend.
+
+---
+
+## 8. Лицензия и примечания
+
+Проект создан в учебных/демонстрационных целях. Состав и описание соответствуют текущему состоянию репозитория (структура, Makefile, скрипты setup, docker-compose, эндпоинты и сценарии опираются на реальные файлы проекта).
+
+---
+
+*README составлен по структуре репозитория: `Makefile`, `setup.sh`, `setup.bat`, `docker-compose.yml`, `backend/requirements.txt`, `backend/Dockerfile`, `backend/app/config.py`, `frontend/package.json`, `frontend/Dockerfile`, `.env.example`, `backend/.env.example`, `frontend/.env.example`, роутеры и сервисы backend/frontend.*
