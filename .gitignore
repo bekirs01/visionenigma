@@ -18,7 +18,11 @@ support_mvp.db
 htmlcov/
 .idea/
 .vscode/
+# Секреты и локальная конфигурация — не коммитить
 .env
 .env.*
 *.env
+backend/.env
 !.env.example
+!backend/.env.example
+!frontend/.env.example
