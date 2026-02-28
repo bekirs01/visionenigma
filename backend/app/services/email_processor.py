@@ -14,6 +14,7 @@ _sync_lock = threading.Lock()
 
 from app.services.email_adapters import ImapEmailFetcher, RawEmailMessage
 from app.services.ai_agent import AIAgent
+from app.services.telegram_service import should_send_telegram_alert, send_telegram_alert
 from app.models import Ticket
 from app.config import get_settings
 
@@ -139,7 +140,28 @@ class EmailProcessor:
                 result = agent.process_ticket(ticket)
                 agent.update_ticket_with_result(ticket, result)
                 self.db.commit()
+                self.db.refresh(ticket)
                 print(f"[EmailProcessor] AI анализ тикета #{ticket.id} завершён")
+                # Telegram: negatif/acil ise tek seferlik bildirim
+                try:
+                    if should_send_telegram_alert(
+                        ticket.sentiment, ticket.priority, getattr(ticket, "telegram_notified_at", None)
+                    ):
+                        base_url = (getattr(self.settings, "telegram_app_url", None) or "").rstrip("/") or "http://localhost:3000"
+                        link = f"{base_url}/tickets/{ticket.id}"
+                        if send_telegram_alert(
+                            ticket_id=ticket.id,
+                            link=link,
+                            from_email=ticket.sender_email,
+                            subject=ticket.subject,
+                            summary=ticket.issue_summary,
+                            tonality=ticket.sentiment,
+                            priority=ticket.priority,
+                        ):
+                            ticket.telegram_notified_at = datetime.now(timezone.utc)
+                            self.db.commit()
+                except Exception as tg_err:
+                    print(f"[EmailProcessor] Telegram bildirimi atlama: {tg_err}")
             except Exception as e:
                 print(f"[EmailProcessor] Ошибка AI анализа: {e}")
                 # Продолжаем без AI анализа

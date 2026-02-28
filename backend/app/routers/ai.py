@@ -3,6 +3,7 @@ AI: анализ тикета (OpenAI) и отправка ответа по SMT
 Адаптировано для кейса ЭРИС (газоанализаторы).
 """
 import json
+import logging
 from datetime import datetime, timezone
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -15,6 +16,8 @@ from app.services.openai_service import analyze_eris_email, analyze_with_openai
 from app.services.smtp_service import send_email
 from app.services.ai_agent import AIAgent
 from app.services.kb_search import get_kb_context
+from app.services.telegram_service import should_send_telegram_alert, send_telegram_alert
+from app.config import get_settings
 
 router = APIRouter(prefix="/api/ai", tags=["ai"])
 
@@ -62,6 +65,27 @@ def ai_analyze(
 
     db.commit()
     db.refresh(ticket)
+
+    # Telegram: acil/negatif ise tek seferlik bildirim (akışı kesmeyen)
+    try:
+        if should_send_telegram_alert(
+            ticket.sentiment, ticket.priority, ticket.telegram_notified_at
+        ):
+            base_url = (get_settings().telegram_app_url or "").rstrip("/") or "http://localhost:3000"
+            link = f"{base_url}/tickets/{ticket.id}"
+            if send_telegram_alert(
+                ticket_id=ticket.id,
+                link=link,
+                from_email=ticket.sender_email,
+                subject=ticket.subject,
+                summary=ticket.issue_summary,
+                tonality=ticket.sentiment,
+                priority=ticket.priority,
+            ):
+                ticket.telegram_notified_at = datetime.now(timezone.utc)
+                db.commit()
+    except Exception as e:
+        logging.getLogger(__name__).warning("Telegram bildirimi atlama: %s", str(e)[:200])
 
     return AnalyzeResponse(
         ai_category=ticket.ai_category or "other",

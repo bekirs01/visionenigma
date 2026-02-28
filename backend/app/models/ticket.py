@@ -63,6 +63,9 @@ class Ticket(Base):
     # Устройство: desktop/mobile + краткий user-agent (только при создании с фронта)
     device_info = Column(Text, nullable=True)
 
+    # Telegram: acil bildirim bir kez gönderildi mi (spam önleme)
+    telegram_notified_at = Column(DateTime(timezone=True), nullable=True)
+
     category = relationship("Category", back_populates="tickets")
     messages = relationship("Message", back_populates="ticket", cascade="all, delete-orphan")
     ai_analyses = relationship("AiAnalysis", back_populates="ticket", cascade="all, delete-orphan")

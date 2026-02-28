@@ -61,6 +61,12 @@ class Settings(BaseSettings):
     cron_secret: str = ""
     email_sync_interval_seconds: int = 60
 
+    # Telegram acil bildirim (env'den; token/chat_id log'a yazılmaz)
+    telegram_enabled: bool = True
+    telegram_bot_token: str = ""
+    telegram_chat_id: str = ""
+    telegram_app_url: str = "http://localhost:3000"  # Ticket link base URL
+
     class Config:
         env_file = str(ROOT_ENV) if ROOT_ENV.exists() else str(ENV_FILE_PATH)
         env_file_encoding = "utf-8"
