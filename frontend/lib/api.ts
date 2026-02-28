@@ -53,7 +53,7 @@ export const api = {
     if (params?.offset) sp.set("offset", String(params.offset));
     if (clientToken) sp.set("client_token", clientToken);
     const q = sp.toString();
-    return fetchApi<import("@/app/types").Ticket[]>(`/api/tickets${q ? `?${q}` : ""}`);
+    return fetchApi<{ items: import("@/app/types").Ticket[]; total: number }>(`/api/tickets${q ? `?${q}` : ""}`);
   },
 
   getTicket: (id: number, clientToken?: string) => {

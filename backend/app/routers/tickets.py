@@ -8,7 +8,7 @@ from fastapi.responses import StreamingResponse, Response
 from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models import Ticket, Category, AiAnalysis
-from app.schemas import TicketCreate, TicketRead, TicketUpdate, AnalyzeResponse, SuggestReplyResponse
+from app.schemas import TicketCreate, TicketRead, TicketUpdate, TicketsResponse, AnalyzeResponse, SuggestReplyResponse
 from app.repositories.ticket_repo import TicketRepository
 from app.services.mock_ai import MockAIService
 from app.auth import require_admin, require_admin_dep
@@ -53,7 +53,7 @@ def process_ticket_ai_background(ticket_id: int):
         db.close()
 
 
-@router.get("/tickets", response_model=List[TicketRead])
+@router.get("/tickets", response_model=TicketsResponse)
 def list_tickets(
     request: Request,
     search: Optional[str] = Query(None),
@@ -69,15 +69,16 @@ def list_tickets(
 ):
     token = (client_token or x_client_token or "").strip()
     view_val = view if view in ("open", "answered") else None
+    repo = TicketRepository()
     if token:
-        repo = TicketRepository()
+        total = repo.get_count(db, search=search, status=status, category_id=category_id, request_category=request_category, client_token=token, view=view_val)
         tickets = repo.get_list(db, search=search, status=status, category_id=category_id, request_category=request_category, client_token=token, view=view_val, limit=limit, offset=offset)
-        return tickets
+        return TicketsResponse(items=tickets, total=total)
     if require_admin(request):
-        repo = TicketRepository()
+        total = repo.get_count(db, search=search, status=status, category_id=category_id, request_category=request_category, client_token=None, view=view_val or "open")
         tickets = repo.get_list(db, search=search, status=status, category_id=category_id, request_category=request_category, client_token=None, view=view_val or "open", limit=limit, offset=offset)
-        return tickets
-    return []
+        return TicketsResponse(items=tickets, total=total)
+    return TicketsResponse(items=[], total=0)
 
 
 @router.post("/tickets", response_model=TicketRead)

@@ -170,48 +170,45 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="min-h-screen overflow-hidden bg-gradient-to-br from-slate-50/100 via-violet-50/40 to-slate-50/100">
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-32 -right-32 h-80 w-80 rounded-full bg-violet-200/30 blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 h-80 w-80 rounded-full bg-indigo-200/20 blur-3xl" />
-      </div>
-
-      <header className="relative z-10 border-b border-slate-200/80 bg-white/80 backdrop-blur-md sticky top-0">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="min-h-screen overflow-hidden bg-[#f8fafc]">
+      <header className="sticky top-0 z-10 border-b border-slate-200/90 bg-white/90 backdrop-blur-md">
+        <div className="mx-auto max-w-[1440px] px-6 py-5 lg:px-8">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <Link
                 href="/admin/panel"
-                className="inline-flex items-center gap-2 text-sm text-violet-600 hover:text-violet-700 transition-colors mb-2"
+                className="inline-flex items-center gap-2 text-sm font-medium text-violet-600 hover:text-violet-700 transition-colors mb-1.5"
               >
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
                 Назад к тикетам
               </Link>
-              <h1 className="text-xl font-bold text-slate-800">Аналитика</h1>
-              <p className="text-sm text-slate-500">Статистика обращений</p>
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900">Аналитика</h1>
+              <p className="text-sm text-slate-500 mt-0.5">Статистика обращений</p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              {PERIOD_OPTIONS.map(({ label, days }) => (
-                <button
-                  key={days}
-                  onClick={() => setPeriodDays(days)}
-                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-violet-400/50 ${
-                    periodDays === days
-                      ? "bg-violet-600 text-white shadow-md"
-                      : "bg-white/80 text-slate-600 border border-slate-200/80 hover:bg-slate-50"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="inline-flex rounded-xl bg-slate-100/80 p-0.5" role="group" aria-label="Период">
+                {PERIOD_OPTIONS.map(({ label, days }) => (
+                  <button
+                    key={days}
+                    onClick={() => setPeriodDays(days)}
+                    className={`rounded-lg px-4 py-2 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-violet-400/40 focus:ring-offset-1 ${
+                      periodDays === days
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "text-slate-600 hover:text-slate-800"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
               <Button
                 variant="secondary"
                 onClick={loadAnalytics}
                 disabled={loading}
-                className="shrink-0"
+                className="shrink-0 rounded-xl border-slate-200"
               >
                 {loading ? (
                   <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
@@ -224,21 +221,29 @@ export default function AnalyticsPage() {
                   </>
                 )}
               </Button>
-              <div className="flex gap-1 border-l border-slate-200 pl-2">
+              <div className="flex gap-1.5 border-l border-slate-200 pl-3">
                 <button
                   type="button"
                   onClick={handleExportCsv}
                   disabled={loading}
-                  className="rounded-lg border border-slate-200 bg-white/80 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-violet-400/50 disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-violet-400/40 disabled:opacity-50 transition-colors"
+                  title="Экспорт CSV"
                 >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0118 19v-4" />
+                  </svg>
                   CSV
                 </button>
                 <button
                   type="button"
                   onClick={handleExportXlsx}
                   disabled={loading}
-                  className="rounded-lg border border-slate-200 bg-white/80 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-violet-400/50 disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-violet-400/40 disabled:opacity-50 transition-colors"
+                  title="Экспорт XLSX"
                 >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0118 19v-4" />
+                  </svg>
                   XLSX
                 </button>
               </div>
@@ -247,7 +252,7 @@ export default function AnalyticsPage() {
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto max-w-7xl px-4 py-6 sm:px-6">
+      <main className="relative z-10 mx-auto max-w-[1440px] px-6 py-8 lg:px-8">
         {error && (
           <Alert variant="error" className="mb-6" onRetry={loadAnalytics}>
             {error}
@@ -256,20 +261,19 @@ export default function AnalyticsPage() {
 
         {loading ? (
           <>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-8">
               {[1, 2, 3, 4].map((i) => (
                 <KpiSkeleton key={i} />
               ))}
             </div>
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 mb-6">
-              <ChartSkeleton />
-              <ChartSkeleton />
-              <ChartSkeleton />
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-12 mb-8">
+              <div className="xl:col-span-8"><ChartSkeleton /></div>
+              <div className="xl:col-span-4 space-y-6"><ChartSkeleton /><ChartSkeleton /></div>
             </div>
           </>
         ) : (
           <>
-            <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+            <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-8">
               <KpiCard
                 title="Всего тикетов"
                 value={summary?.total_tickets ?? 0}
@@ -320,8 +324,8 @@ export default function AnalyticsPage() {
               />
             </section>
 
-            <section className="grid grid-cols-1 gap-6 lg:grid-cols-3 mb-6">
-              <div className="lg:col-span-2">
+            <section className="grid grid-cols-1 gap-6 xl:grid-cols-12 mb-8">
+              <div className="xl:col-span-8">
                 <ChartCard title={`Тикеты за период (${periodDays} дн.)`}>
                   {timelineFiltered.length > 0 ? (
                     <TimelineArea data={timelineFiltered} />
@@ -330,17 +334,19 @@ export default function AnalyticsPage() {
                   )}
                 </ChartCard>
               </div>
-              <div className="space-y-6">
+              <div className="xl:col-span-4 space-y-6">
                 <ChartCard title="По источнику">
                   {bySource.length > 0 ? (
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       {bySource.map((item, idx) => (
                         <div
                           key={idx}
-                          className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2"
+                          className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2.5"
                         >
                           <span className="text-sm font-medium text-slate-700">{item.source}</span>
-                          <span className="tabular-nums text-slate-600">{item.count}</span>
+                          <span className="shrink-0 rounded-md bg-slate-200/80 px-2 py-0.5 text-xs font-medium tabular-nums text-slate-600">
+                            {item.count}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -350,24 +356,23 @@ export default function AnalyticsPage() {
                 </ChartCard>
                 <ChartCard title="По тональности">
                   {bySentiment.length > 0 ? (
-                    <div className="space-y-3">
+                    <div className="space-y-3.5">
                       {bySentiment.map((item, idx) => (
-                        <div key={idx} className="flex justify-between text-sm">
-                          <span className="font-medium text-slate-700">{item.sentiment}</span>
-                          <span className="tabular-nums text-slate-500">
-                            {item.count} ({item.percentage}%)
-                          </span>
+                        <div key={idx}>
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <span className="text-sm font-medium text-slate-700">{item.sentiment}</span>
+                            <span className="shrink-0 rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium tabular-nums text-slate-600">
+                              {item.count} ({item.percentage}%)
+                            </span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${SENTIMENT_COLORS[item.sentiment] ?? "bg-slate-300"}`}
+                              style={{ width: `${Math.max(item.percentage, 2)}%` }}
+                            />
+                          </div>
                         </div>
                       ))}
-                      <div className="h-2 flex gap-0.5 rounded-full overflow-hidden">
-                        {bySentiment.map((item, idx) => (
-                          <div
-                            key={idx}
-                            className={`${SENTIMENT_COLORS[item.sentiment] ?? "bg-slate-300"}`}
-                            style={{ width: `${item.percentage}%` }}
-                          />
-                        ))}
-                      </div>
                     </div>
                   ) : (
                     <EmptyState />
@@ -376,7 +381,7 @@ export default function AnalyticsPage() {
               </div>
             </section>
 
-            <section className="grid grid-cols-1 gap-6 lg:grid-cols-2 mb-6">
+            <section className="grid grid-cols-1 gap-6 xl:grid-cols-2 mb-8">
               <ChartCard title="По категориям">
                 {byCategory.length > 0 ? (
                   <BarChartHorizontal
@@ -407,9 +412,9 @@ export default function AnalyticsPage() {
               </ChartCard>
             </section>
 
-            <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {summary?.avg_response_hours != null && (
-                <ChartCard title="Среднее время ответа" className="sm:col-span-2 lg:col-span-1">
+                <ChartCard title="Среднее время ответа" className="sm:col-span-2 xl:col-span-1">
                   <p className="text-2xl font-bold tabular-nums text-violet-600">
                     {summary.avg_response_hours < 1
                       ? `${Math.round(summary.avg_response_hours * 60)} мин`

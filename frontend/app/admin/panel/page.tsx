@@ -4,24 +4,20 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { Card, Button, Badge, Spinner, Alert } from "@/components/ui";
+import { Button, Spinner, Alert } from "@/components/ui";
 import { useI18n } from "@/app/i18n/I18nProvider";
 import type { Ticket, Category } from "@/app/types";
 
-// Компонент для отображения тональности (sentiment)
 function SentimentBadge({ sentiment }: { sentiment?: string }) {
-  if (!sentiment) return <span className="text-slate-400">—</span>;
-
+  if (!sentiment) return <span className="text-slate-400 whitespace-nowrap">—</span>;
   const config = {
-    positive: { color: "bg-green-100 text-green-700", icon: "😊", label: "Позитив" },
-    neutral: { color: "bg-slate-100 text-slate-600", icon: "😐", label: "Нейтраль" },
-    negative: { color: "bg-red-100 text-red-700", icon: "😠", label: "Негатив" },
+    positive: { color: "bg-emerald-50 text-emerald-700 border-emerald-200", icon: "😊", label: "Позитивная" },
+    neutral: { color: "bg-slate-100 text-slate-600 border-slate-200", icon: "😐", label: "Нейтральная" },
+    negative: { color: "bg-red-50 text-red-700 border-red-200", icon: "😠", label: "Негативная" },
   };
-
   const cfg = config[sentiment as keyof typeof config] || config.neutral;
-
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-px rounded-full text-[10px] font-medium ${cfg.color}`}>
+    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border whitespace-nowrap ${cfg.color}`}>
       <span>{cfg.icon}</span>
       <span>{cfg.label}</span>
     </span>
@@ -44,6 +40,11 @@ export default function AdminPanelPage() {
   const [syncLoading, setSyncLoading] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const syncInFlightRef = useRef(false);
+
+  const PAGE_SIZE_OPTIONS = [10, 15, 20, 50] as const;
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(15);
+  const [totalCount, setTotalCount] = useState(0);
 
   // 20 категорий запросов (whitelist, как в backend)
   const requestCategories = [
@@ -81,7 +82,8 @@ export default function AdminPanelPage() {
     status: statusFilter || undefined,
     request_category: categoryFilter || undefined,
     view: "open" as const,
-    limit: 100,
+    limit: pageSize,
+    offset: (page - 1) * pageSize,
   });
 
   const loadTickets = async () => {
@@ -89,23 +91,23 @@ export default function AdminPanelPage() {
     setError(null);
     try {
       const data = await api.getTickets(getListParams());
-      setTickets(data);
+      setTickets(data?.items ?? []);
+      setTotalCount(data?.total ?? 0);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("loadError"));
       setTickets([]);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
   };
 
-  /** Arka planda liste yenileme (polling; spinner göstermez). */
   const refetchTicketsSilent = async () => {
     try {
       const data = await api.getTickets(getListParams());
-      setTickets(data);
-    } catch {
-      // Sessizce yoksay; sayfa kırılmasın
-    }
+      setTickets(data?.items ?? []);
+      setTotalCount(data?.total ?? 0);
+    } catch {}
   };
 
   const loadCategories = async () => {
@@ -122,10 +124,14 @@ export default function AdminPanelPage() {
   }, []);
 
   useEffect(() => {
+    setPage(1);
+  }, [search, statusFilter, categoryFilter, pageSize]);
+
+  useEffect(() => {
     if (isAdmin) {
       loadTickets();
     }
-  }, [isAdmin, search, statusFilter, categoryFilter]);
+  }, [isAdmin, search, statusFilter, categoryFilter, page, pageSize]);
 
   useEffect(() => {
     if (syncMessage) {
@@ -221,6 +227,7 @@ export default function AdminPanelPage() {
     try {
       await api.deleteTicket(ticketId);
       setTickets((prev) => prev.filter((t) => t.id !== ticketId));
+      setTotalCount((c) => Math.max(0, c - 1));
     } catch (e) {
       setError(e instanceof Error ? e.message : t("loadError"));
     }
@@ -246,96 +253,50 @@ export default function AdminPanelPage() {
         <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-teal-300 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob animation-delay-2000" />
       </div>
 
-      {/* Header */}
-      <header className="relative bg-white/70 backdrop-blur-md border-b border-white/20 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+      {/* Header — premium toolbar */}
+      <header className="relative bg-white/80 backdrop-blur-md border-b border-slate-200/60 sticky top-0 z-50 shadow-sm">
+        <div className="max-w-[1440px] mx-auto px-6 py-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <Link href="/" className="inline-flex items-center gap-2 text-sm text-emerald-600 hover:text-emerald-700 transition-colors mb-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
+              <Link href="/" className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 transition-colors mb-1.5">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                 {t("backToHome")}
               </Link>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
+                <div className="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                    {t("adminPanel")}
-                  </h1>
-                  <p className="text-sm text-slate-600">{t("manageTickets")}</p>
+                  <h1 className="text-lg font-semibold text-slate-900">{t("adminPanel")}</h1>
+                  <p className="text-sm text-slate-500">{t("manageTickets")}</p>
                 </div>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Link href="/admin/archive">
-                <Button variant="secondary" className="shadow-md bg-gradient-to-r from-slate-50 to-slate-100 border-slate-200 hover:border-slate-300">
-                  <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                  </svg>
-                  <span className="text-slate-700">Архив</span>
+                <Button variant="secondary" className="rounded-xl border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-sm transition-shadow hover:shadow">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
+                  <span>Архив</span>
                 </Button>
               </Link>
               <Link href="/admin/analytics">
-                <Button variant="secondary" className="shadow-md bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200 hover:border-purple-300">
-                  <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                  <span className="text-purple-700">Аналитика</span>
+                <Button variant="primary" className="rounded-xl bg-violet-600 hover:bg-violet-700 border-violet-600 text-white shadow-sm">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                  <span>Аналитика</span>
                 </Button>
               </Link>
-              <Button
-                variant="secondary"
-                onClick={handleRefresh}
-                disabled={syncLoading}
-                className="shadow-md"
-              >
-                {syncLoading ? (
-                  <><span className="inline-block w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" /> {t("loading")}</>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    {t("refresh")}
-                  </>
-                )}
+              <Button variant="secondary" onClick={handleRefresh} disabled={syncLoading} className="rounded-xl border-slate-200 bg-white text-slate-700 hover:bg-slate-50 shadow-sm">
+                {syncLoading ? <><span className="inline-block w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" /> {t("loading")}</> : <><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg> {t("refresh")}</>}
               </Button>
-              {syncMessage && (
-                <span className="text-sm text-green-600 font-medium animate-pulse">{syncMessage}</span>
-              )}
-              <Button variant="secondary" onClick={exportCsv} disabled={exportLoading} className="shadow-md">
-                {exportLoading ? (
-                  <><div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" /> {t("loading")}</>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    CSV
-                  </>
-                )}
+              {syncMessage && <span className="text-sm text-emerald-600 font-medium">{syncMessage}</span>}
+              <Button variant="secondary" onClick={exportCsv} disabled={exportLoading} className="rounded-xl border-slate-200 bg-white text-slate-700 hover:bg-slate-50 shadow-sm">
+                {exportLoading ? <><div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" /> {t("loading")}</> : <><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> CSV</>}
               </Button>
-              <Button variant="secondary" onClick={exportXlsx} disabled={xlsxLoading} className="shadow-md">
-                {xlsxLoading ? (
-                  <><div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" /> {t("loading")}</>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    XLSX
-                  </>
-                )}
+              <Button variant="secondary" onClick={exportXlsx} disabled={xlsxLoading} className="rounded-xl border-slate-200 bg-white text-slate-700 hover:bg-slate-50 shadow-sm">
+                {xlsxLoading ? <><div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" /> {t("loading")}</> : <><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> XLSX</>}
               </Button>
-              <Button variant="primary" onClick={handleLogout} className="shadow-lg shadow-emerald-500/30" style={{ backgroundColor: '#059669', borderColor: '#059669' }}>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
+              <Button variant="primary" onClick={handleLogout} className="rounded-xl bg-emerald-600 hover:bg-emerald-700 border-emerald-600 text-white shadow-sm">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
                 {t("logout")}
               </Button>
             </div>
@@ -344,34 +305,32 @@ export default function AdminPanelPage() {
       </header>
 
       {/* Main */}
-      <main className="relative max-w-7xl mx-auto px-4 sm:px-6 py-8">
+      <main className="relative max-w-[1440px] mx-auto px-4 sm:px-6 py-5">
         {error && (
           <Alert variant="error" className="mb-6" onRetry={loadTickets}>
             {error}
           </Alert>
         )}
 
-        {/* Filters */}
-        <Card className="p-5 mb-6 bg-white/90 backdrop-blur-md border-white/50 shadow-xl">
+        {/* Filter bar — premium */}
+        <div className="max-w-7xl mx-auto mb-4 p-4 rounded-[18px] border border-slate-200/80 bg-white shadow-sm shadow-slate-200/50">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1 relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
               </div>
               <input
                 type="text"
                 placeholder={t("searchPlaceholder")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 focus:bg-white transition-all"
               />
             </div>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 w-full sm:w-40"
+              className="px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 text-slate-700 focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 w-full sm:w-40 focus:bg-white transition-all"
             >
               <option value="">Все статусы</option>
               <option value="not_completed">Не завершён</option>
@@ -380,184 +339,171 @@ export default function AdminPanelPage() {
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 w-full sm:w-48"
+              className="px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 text-slate-700 focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 w-full sm:w-48 focus:bg-white transition-all"
             >
               <option value="">Все категории</option>
               {requestCategories.map((c) => (
-                <option key={c.value} value={c.value}>
-                  {c.label}
-                </option>
+                <option key={c.value} value={c.value}>{c.label}</option>
               ))}
             </select>
           </div>
-        </Card>
+        </div>
 
-        {/* Tickets Table */}
-        <Card className="overflow-hidden bg-white/90 backdrop-blur-md border border-slate-200/80 shadow-md rounded-2xl">
+        {/* Tickets Table — premium */}
+        <div className="max-w-7xl mx-auto rounded-[18px] border border-slate-200/80 bg-white shadow-sm shadow-slate-200/50 overflow-hidden pt-0">
           {loading ? (
             <div className="p-16 flex flex-col items-center justify-center gap-4 text-slate-500">
-              <div className="relative">
-                <div className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
-              </div>
-              <span className="font-medium">{t("loading")}</span>
+              <div className="w-12 h-12 border-4 border-slate-200 border-t-violet-500 rounded-full animate-spin" />
+              <span className="font-medium text-slate-600">{t("loading")}</span>
             </div>
           ) : tickets.length === 0 ? (
             <div className="p-16 text-center">
-              <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
-                <svg className="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
+              <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-slate-100 flex items-center justify-center">
+                <svg className="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
               </div>
               <p className="text-lg font-medium text-slate-700">{t("noTicketsAdmin")}</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200">
-                    <th className="text-left py-3 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider w-12">
-                      №
-                    </th>
-                    <th className="text-left py-3 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      {t("subject")}
-                    </th>
-                    <th className="text-left py-4 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      ФИО
-                    </th>
-                    <th className="text-left py-4 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      Организация
-                    </th>
-                    <th className="text-left py-4 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      Телефон
-                    </th>
-                    <th className="text-left py-4 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      Прибор
-                    </th>
-                    <th className="text-left py-4 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      Заводские №
-                    </th>
-                    <th className="text-left py-4 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider min-w-[300px]">
-                      Суть вопроса
-                    </th>
-                    <th className="text-left py-4 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      Тональность
-                    </th>
-                    <th className="text-left py-4 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      Категория
-                    </th>
-                    <th className="text-left py-4 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      Оператор
-                    </th>
-                    <th className="text-left py-3 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      {t("createdAt")}
-                    </th>
-                    <th className="text-left py-3 px-4 text-xs font-semibold text-slate-600 uppercase tracking-wider w-28"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tickets.map((ticket, index) => (
-                    <tr
-                      key={ticket.id}
-                      className={`border-b border-slate-100 hover:bg-slate-50/80 transition-colors ${index % 2 === 0 ? "bg-white" : "bg-slate-50/30"}`}
-                    >
-                      <td className="py-3 px-4 text-sm text-slate-500 tabular-nums whitespace-nowrap">
-                        {index + 1}
-                      </td>
-                      <td className="py-3 px-4 min-w-[220px]">
-                        <div
-                          className="text-sm font-semibold text-slate-800 line-clamp-2"
-                          title={ticket.device_info ? `${ticket.subject}\nУстройство: ${ticket.device_info}` : ticket.subject}
-                        >
-                          {ticket.subject}
-                        </div>
-                        <div className="text-xs text-slate-500">{ticket.sender_email}</div>
-                      </td>
-                      <td className="py-3 px-4 text-sm text-slate-600">
-                        {ticket.sender_full_name || ticket.sender_name || "—"}
-                      </td>
-                      <td className="py-3 px-4 text-sm text-slate-600 min-w-[180px]">
-                        <div className="line-clamp-2" title={ticket.object_name || ""}>
-                          {ticket.object_name || "—"}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 text-sm text-slate-600 whitespace-nowrap">
-                        {ticket.sender_phone || "—"}
-                      </td>
-                      <td className="py-3 px-4 text-sm text-slate-600">
-                        {ticket.device_type || "—"}
-                      </td>
-                      <td className="py-3 px-4 text-sm text-slate-600">
-                        {ticket.serial_numbers && ticket.serial_numbers.length > 0 ? (
-                          <div className="flex flex-wrap gap-1">
-                            {ticket.serial_numbers.slice(0, 3).map((sn, i) => (
-                              <span key={i} className="inline-block px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-mono">
-                                {sn}
-                              </span>
-                            ))}
-                            {ticket.serial_numbers.length > 3 && (
-                              <span className="text-xs text-slate-400">+{ticket.serial_numbers.length - 3}</span>
-                            )}
-                          </div>
-                        ) : "—"}
-                      </td>
-                      <td className="py-3 px-4 text-sm text-slate-600 min-w-[300px]">
-                        <div className="line-clamp-3 leading-relaxed" title={ticket.issue_summary || ""}>
-                          {ticket.issue_summary || "—"}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <SentimentBadge sentiment={ticket.sentiment} />
-                      </td>
-                      <td className="py-3 px-4 text-sm text-slate-600">
-                        {ticket.request_category || categoryName(ticket.category_id) || "—"}
-                      </td>
-                      <td className="py-3 px-4">
-                        {Boolean(ticket.operator_required) ? (
-                          <span
-                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-100 whitespace-nowrap"
-                            title={ticket.operator_reason || "Запрос требует вмешательства специалиста."}
-                          >
-                            Требуется оператор
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-50 text-slate-600 border border-slate-100 whitespace-nowrap">
-                            Оператор не требуется
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-sm text-slate-500 whitespace-nowrap">
-                        {ticket.created_at
-                          ? new Date(ticket.created_at).toLocaleString("ru")
-                          : "—"}
-                      </td>
-                      <td className="py-3 px-4 flex items-center gap-2">
-                        <Link
-                          href={`/tickets/${ticket.id}`}
-                          className="inline-flex items-center gap-1 text-emerald-600 hover:text-emerald-700 font-medium text-sm hover:underline"
-                        >
-                          {t("open")}
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </Link>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteTicket(ticket.id)}
-                          className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors"
-                          title={t("delete") || "Sil"}
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      </td>
+            <>
+              <div className="overflow-x-auto max-h-[70vh] min-w-0">
+                <table className="w-full border-collapse" style={{ minWidth: "1420px", tableLayout: "fixed" }}>
+                  <colgroup>
+                    <col style={{ width: 44 }} />
+                    <col style={{ width: 220 }} />
+                    <col style={{ width: 120 }} />
+                    <col style={{ width: 140 }} />
+                    <col style={{ width: 110 }} />
+                    <col style={{ width: 100 }} />
+                    <col style={{ width: 120 }} />
+                    <col style={{ width: 200 }} />
+                    <col style={{ width: 115 }} />
+                    <col style={{ width: 110 }} />
+                    <col style={{ width: 185 }} />
+                    <col style={{ width: 130 }} />
+                    <col style={{ width: 110 }} />
+                  </colgroup>
+                  <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur border-b border-slate-200">
+                    <tr>
+                      <th className="sticky left-0 z-30 text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap w-0 bg-[#f8fafc]" title="№" style={{ width: 44, minWidth: 44 }}>№</th>
+                      <th className="sticky left-[44px] z-30 text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap min-w-0 bg-[#f8fafc] shadow-[2px_0_6px_-2px_rgba(0,0,0,0.08)]" title={t("subject")} style={{ width: 220, minWidth: 220 }}>{t("subject")}</th>
+                      <th className="text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis min-w-0">ФИО</th>
+                      <th className="text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis min-w-0">Организация</th>
+                      <th className="text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis min-w-0">Телефон</th>
+                      <th className="text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis min-w-0">Прибор</th>
+                      <th className="text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis min-w-0" title="Заводские №">Завод. №</th>
+                      <th className="text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis min-w-0">Суть вопроса</th>
+                      <th className="text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap min-w-0">ТОНАЛЬНОСТЬ</th>
+                      <th className="text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis min-w-0">Категория</th>
+                      <th className="text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis min-w-0">Оператор</th>
+                      <th className="text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis min-w-0" title={t("createdAt")}>{t("createdAt")}</th>
+                      <th className="text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-0"></th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {tickets.map((ticket, index) => {
+                      const startRow = (page - 1) * pageSize;
+                      return (
+                        <tr key={ticket.id} className="group relative border-b border-slate-100 bg-white hover:bg-slate-50/80 hover:z-[1] transition-colors">
+                          <td className="sticky left-0 z-20 py-2.5 px-2 text-sm text-slate-500 tabular-nums align-top w-0 bg-white group-hover:bg-slate-50" style={{ width: 44, minWidth: 44 }}>{startRow + index + 1}</td>
+                          <td className="sticky left-[44px] z-20 py-2.5 px-2 align-top min-w-0 bg-white group-hover:bg-slate-50 shadow-[2px_0_6px_-2px_rgba(0,0,0,0.06)]" style={{ width: 220, minWidth: 220 }}>
+                            <div className="text-sm font-medium text-slate-800 break-words" title={ticket.device_info ? `${ticket.subject}\nУстройство: ${ticket.device_info}` : ticket.subject}>{ticket.subject}</div>
+                            <div className="text-xs text-slate-500 break-words">{ticket.sender_email}</div>
+                          </td>
+                          <td className="py-2.5 px-2 text-sm text-slate-700 align-top min-w-0"><span className="break-words">{ticket.sender_full_name || ticket.sender_name || "—"}</span></td>
+                          <td className="py-2.5 px-2 text-sm text-slate-600 align-top min-w-0"><span className="break-words">{ticket.object_name || "—"}</span></td>
+                          <td className="py-2.5 px-2 text-sm text-slate-600 align-top min-w-0"><span className="break-words">{ticket.sender_phone || "—"}</span></td>
+                          <td className="py-2.5 px-2 text-sm text-slate-600 align-top min-w-0"><span className="break-words">{ticket.device_type || "—"}</span></td>
+                          <td className="py-2.5 px-2 text-sm text-slate-600 align-top min-w-0">
+                            {ticket.serial_numbers?.length ? (
+                              <div className="flex flex-wrap gap-1">
+                                {ticket.serial_numbers.slice(0, 3).map((sn, i) => (
+                                  <span key={i} className="inline-block px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-mono break-all">{sn}</span>
+                                ))}
+                                {ticket.serial_numbers.length > 3 && <span className="text-xs text-slate-400">+{ticket.serial_numbers.length - 3}</span>}
+                              </div>
+                            ) : <span className="text-slate-400">—</span>}
+                          </td>
+                          <td className="py-2.5 px-2 text-sm text-slate-600 align-top min-w-0"><div className="leading-snug text-slate-700 break-words">{ticket.issue_summary || "—"}</div></td>
+                          <td className="py-2.5 px-2 pr-8 align-top min-w-0"><SentimentBadge sentiment={ticket.sentiment} /></td>
+                          <td className="py-2.5 pl-6 pr-4 text-sm text-slate-600 align-top min-w-0"><span className="break-words">{ticket.request_category || categoryName(ticket.category_id) || "—"}</span></td>
+                          <td className="py-2.5 pl-5 pr-2 align-top min-w-0">
+                            {Boolean(ticket.operator_required) ? (
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200/80 whitespace-nowrap" title={ticket.operator_reason || "Требуется оператор"}>Требуется оператор</span>
+                            ) : (
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-50 text-slate-500 border border-slate-200/80 whitespace-nowrap">Оператор не требуется</span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-2 pr-2 text-sm text-slate-500 align-top min-w-0 whitespace-nowrap">{ticket.created_at ? new Date(ticket.created_at).toLocaleString("ru") : "—"}</td>
+                          <td className="py-2.5 pl-5 pr-2 align-top w-0 overflow-visible">
+                            <div className="flex items-center gap-1 flex-nowrap justify-start min-w-0 ml-3 -translate-y-[3px]">
+                              <Link href={`/tickets/${ticket.id}`} className="inline-flex items-center gap-0.5 text-violet-600 hover:text-violet-700 font-medium text-sm shrink-0 whitespace-nowrap">
+                                {t("open")}
+                                <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                              </Link>
+                              <button type="button" onClick={() => handleDeleteTicket(ticket.id)} className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors shrink-0" title={t("delete") || "Удалить тикет"}>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex flex-row flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-slate-200 bg-slate-50/50 min-w-0">
+                <div className="flex items-center gap-2 order-1">
+                  <span className="text-sm text-slate-500 whitespace-nowrap">Строк на странице:</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => setPageSize(Number(e.target.value))}
+                    className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-700 focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400"
+                  >
+                    {PAGE_SIZE_OPTIONS.map((n) => (
+                      <option key={n} value={n}>{n}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-center gap-1 order-2">
+                    <button
+                      type="button"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={page <= 1}
+                      className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                    </button>
+                    {Array.from({ length: Math.min(5, Math.ceil(totalCount / pageSize) || 1) }, (_, i) => {
+                      const totalPages = Math.ceil(totalCount / pageSize) || 1;
+                      let p: number;
+                      if (totalPages <= 5) p = i + 1;
+                      else if (page <= 3) p = i + 1;
+                      else if (page >= totalPages - 2) p = totalPages - 4 + i;
+                      else p = page - 2 + i;
+                      return (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => setPage(p)}
+                          className={`min-w-[2.25rem] h-9 rounded-lg border text-sm font-medium transition-colors ${page === p ? "border-violet-500 bg-violet-500 text-white" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}`}
+                        >
+                          {p}
+                        </button>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      onClick={() => setPage((p) => Math.min(Math.ceil(totalCount / pageSize) || 1, p + 1))}
+                      disabled={page >= Math.ceil(totalCount / pageSize) || totalCount === 0}
+                      className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                    </button>
+                  </div>
+                </div>
+            </>
           )}
-        </Card>
+        </div>
       </main>
 
       <style jsx global>{`

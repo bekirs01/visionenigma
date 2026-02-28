@@ -52,7 +52,7 @@ export default function AdminArchivePage() {
     setError(null);
     try {
       const data = await api.getTickets({ view: "answered", limit: 200 });
-      setTickets(data);
+      setTickets(data?.items ?? []);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("loadError"));
       setTickets([]);

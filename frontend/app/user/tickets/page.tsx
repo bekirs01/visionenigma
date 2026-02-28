@@ -38,7 +38,7 @@ export default function UserTicketsPage() {
     try {
       const clientToken = getOrCreateClientToken();
       const data = await api.getTickets({ limit: 100 }, clientToken);
-      setTickets(data ?? []);
+      setTickets(data?.items ?? []);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("loadError"));
       setTickets([]);

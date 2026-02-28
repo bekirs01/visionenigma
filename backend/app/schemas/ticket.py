@@ -111,3 +111,8 @@ class TicketListQuery(BaseModel):
     category_id: Optional[int] = None
     limit: int = 50
     offset: int = 0
+
+
+class TicketsResponse(BaseModel):
+    items: List[TicketRead]
+    total: int

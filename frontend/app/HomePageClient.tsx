@@ -66,7 +66,7 @@ export default function HomePageClient({
         },
         clientToken
       );
-      setTickets(data);
+      setTickets(data?.items ?? []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка загрузки");
       setTickets([]);
