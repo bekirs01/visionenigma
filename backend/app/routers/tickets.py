@@ -14,6 +14,7 @@ from app.services.mock_ai import MockAIService
 from app.auth import require_admin, require_admin_dep
 from app.services.ai_agent import AIAgent
 from app.services.device_extract import extract_device_model
+from app.services.telegram_service import maybe_send_telegram_alert
 from app.config import get_settings
 
 router = APIRouter(prefix="/api", tags=["tickets"])
@@ -41,6 +42,10 @@ def process_ticket_ai_background(ticket_id: int):
         agent.update_ticket_with_result(ticket, result)
         db.commit()
         print(f"[AI Background] Обработка тикета #{ticket_id} завершена")
+        try:
+            maybe_send_telegram_alert(db, ticket)
+        except Exception as tg_err:
+            print(f"[AI Background] Telegram alert skip: {tg_err}")
     except Exception as e:
         print(f"[AI Background] Ошибка обработки тикета #{ticket_id}: {e}")
         db.rollback()

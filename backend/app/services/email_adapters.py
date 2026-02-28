@@ -7,6 +7,7 @@ import imaplib
 import email
 import ssl
 from email.header import decode_header
+from email.message import Message as EmailMessage
 from email.utils import parseaddr, parsedate_to_datetime
 from abc import ABC, abstractmethod
 from typing import List, Optional, Tuple
@@ -251,7 +252,7 @@ class ImapEmailFetcher(EmailFetcher):
 
         return name if name else None, email_addr
 
-    def _get_body(self, msg: email.message.Message) -> str:
+    def _get_body(self, msg: EmailMessage) -> str:
         """Извлекает текстовое тело письма."""
         body = ""
 
