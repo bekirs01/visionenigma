@@ -52,12 +52,13 @@ def send_telegram_alert(
     subject: Optional[str] = None,
     body_preview: Optional[str] = None,
     summary: Optional[str] = None,
+    operator_reason: Optional[str] = None,
     tonality: Optional[str] = None,
     category: Optional[str] = None,
     operator_required: bool = False,
 ) -> bool:
     """
-    Telegram'a acil destek mesajı gönderir (Rusça format).
+    Telegram'a acil destek mesajı gönderir (Rusça format, link yok).
     Hata durumunda ticket akışını kesmez; sadece loglar. 429'da bir kez retry (2 sn).
     Returns:
         True gönderim başarılı, False değil (ayarlar kapalı, hata, vb.).
@@ -81,28 +82,40 @@ def send_telegram_alert(
     else:
         tonality_display = tonality or "—"
 
-    from_display = (from_name or from_email or "—").strip()
-    if from_email and from_display == from_email:
-        from_display = from_email
-    elif from_email:
-        from_display = f"{from_name or '—'} ({from_email})"
+    # От: name (email) veya sadece email
+    sender_name_or_fallback = (from_name or from_email or "—").strip()
+    if from_email:
+        from_display = f"{sender_name_or_fallback} ({from_email})" if from_name else from_email
+    else:
+        from_display = sender_name_or_fallback
 
-    body_trunc = (body_preview or "")[:200].strip() if body_preview else "—"
-    if body_trunc and body_trunc != "—":
-        body_trunc = body_trunc.replace("<", " ").replace(">", " ")
+    # Кратко: issue_summary veya operator_reason veya fallback
+    kratko_raw = (summary or operator_reason or "").strip()
+    kratko = (kratko_raw[:300] + "…" if len(kratko_raw) > 300 else kratko_raw) or "Нет краткого описания"
+
+    # Сообщение: body 200 karakter veya "(только вложения)"
+    body_raw = (body_preview or "").strip()
+    if not body_raw:
+        body_display = "(только вложения)"
+    else:
+        body_clean = body_raw.replace("<", " ").replace(">", " ")
+        body_display = (body_clean[:200] + "…") if len(body_clean) > 200 else body_clean
+
+    category_display = (category or "").strip() or "—"
 
     lines = [
-        "🚨 <b>Срочное обращение (нужен оператор)</b>",
+        "🚨 <b>Срочный тикет: Нужен оператор</b>",
         "",
-        f"<b>Тикет ID:</b> {ticket_id}",
-        f"<b>Ссылка:</b> {link}",
-        f"<b>От:</b> {from_display}",
-        f"<b>Тональность:</b> {tonality_display}",
-        f"<b>Категория:</b> {(category or '—').strip() or '—'}",
-        f"<b>Кратко:</b> {(summary or '—').strip()[:400] or '—'}",
-        f"<b>Текст:</b> {body_trunc}",
+        f"🆔 Ticket: #{ticket_id}",
+        f"👤 От: {from_display}",
+        f"🙂 Тональность: {tonality_display}",
+        f"📌 Категория: {category_display}",
+        f"🧾 Кратко: {kratko}",
         "",
-        "Откройте тикет и ответьте как можно скорее.",
+        "💬 Сообщение:",
+        f"\"{body_display}\"",
+        "",
+        "✅ Откройте тикет в панели и ответьте как можно скорее.",
     ]
     text = "\n".join(lines)
 
@@ -163,6 +176,7 @@ def maybe_send_telegram_alert(db: "Session", ticket) -> bool:
         subject=getattr(ticket, "subject", None),
         body_preview=getattr(ticket, "body", None),
         summary=getattr(ticket, "issue_summary", None),
+        operator_reason=getattr(ticket, "operator_reason", None),
         tonality=getattr(ticket, "sentiment", None),
         category=category_str,
         operator_required=getattr(ticket, "operator_required", False),
