@@ -1,11 +1,11 @@
 from .category import CategoryCreate, CategoryRead, CategoryUpdate
-from .ticket import TicketCreate, TicketRead, TicketUpdate, TicketListQuery, TicketsResponse
+from .ticket import TicketCreate, TicketRead, TicketUpdate, TicketListQuery, TicketsResponse, TicketAttachmentRead
 from .message import MessageCreate, MessageRead
 from .ai_analysis import AiAnalysisRead, AnalyzeResponse, SuggestReplyResponse
 
 __all__ = [
     "CategoryCreate", "CategoryRead", "CategoryUpdate",
-    "TicketCreate", "TicketRead", "TicketUpdate", "TicketListQuery", "TicketsResponse",
+    "TicketCreate", "TicketRead", "TicketUpdate", "TicketListQuery", "TicketsResponse", "TicketAttachmentRead",
     "MessageCreate", "MessageRead",
     "AiAnalysisRead", "AnalyzeResponse", "SuggestReplyResponse",
 ]

@@ -107,7 +107,9 @@ def analyze_eris_email(
     subject: str,
     body: str,
     sender_email: str = "",
-    kb_context: str = ""
+    kb_context: str = "",
+    attachments_summary: str = "",
+    attachments_extracted_text: str = "",
 ) -> ErisAnalysisResult:
     """
     Полный анализ письма для кейса ЭРИС (газоанализаторы).
@@ -130,7 +132,7 @@ def analyze_eris_email(
         )
 
     from openai import OpenAI
-    client = OpenAI(api_key=settings.openai_api_key.strip())
+    client = OpenAI(api_key=settings.openai_api_key.strip(), timeout=60.0)
 
     system_prompt = """Ты — AI-агент техподдержки компании ООО «ЭРИС» (производитель газоанализаторов и газосигнализаторов).
 
@@ -316,6 +318,22 @@ operator_required = false: простой информационный вопр�
 
     system_prompt = system_prompt.format(kb_section=kb_section)
 
+    attachment_block = ""
+    if attachments_summary.strip():
+        attachment_block = f"""
+Список вложений к письму: {attachments_summary}
+"""
+        if attachments_extracted_text.strip():
+            attachment_block += f"""
+Извлечённый текст из вложений (PDF/изображения):
+{attachments_extracted_text}
+"""
+        else:
+            # Есть вложения, но текст не извлечён (или не поддерживается)
+            attachment_block += """
+Текст из вложений не извлечён (формат не поддерживается или файл нечитаем). В ответе предложи клиенту описать содержание текстом или прислать в другом формате при необходимости.
+"""
+
     user_prompt = f"""Проанализируй письмо в техподдержку ЭРИС:
 
 От: {sender_email}
@@ -323,7 +341,7 @@ operator_required = false: простой информационный вопр�
 
 Текст письма:
 {body}
-
+{attachment_block}
 Извлеки все данные и сформируй ответ. Ответь строго в JSON формате."""
 
     try:

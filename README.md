@@ -67,6 +67,9 @@ visionenigma/
 - **Node.js** — 20 (указано в `frontend/Dockerfile`; для локального запуска подойдёт LTS).
 - **База данных** — PostgreSQL (например 15). При локальном запуске без Docker можно использовать `USE_SQLITE=1` и SQLite (файл в каталоге backend).
 - **Docker и Docker Compose** — только если запуск планируется через контейнеры.
+- **Вложения писем (опционально):** для извлечения текста из PDF и изображений (JPG/PNG) в письмах и передачи в AI нужны системные пакеты:
+  - **Tesseract OCR** — распознавание текста в изображениях и сканах PDF. Установка: macOS `brew install tesseract tesseract-lang`, Ubuntu/Debian `apt install tesseract-ocr tesseract-ocr-rus`, Windows — [GitHub wiki](https://github.com/tesseract-ocr/tesseract).
+  - **Poppler** — для OCR по страницам PDF (pdf2image). Установка: macOS `brew install poppler`, Ubuntu/Debian `apt install poppler-utils`. Если не установлен, текст из PDF будет извлекаться только через встроенный слой (pypdf/pdfminer); скан-PDF без текстового слоя не будет обработан через OCR.
 
 ---
 

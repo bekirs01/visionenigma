@@ -60,6 +60,10 @@ class TicketRead(TicketBase):
     operator_required: bool = False
     operator_reason: Optional[str] = None
 
+    # AI analiz durumu: pending | done | failed (takılı kalmayı önlemek)
+    ai_status: Optional[str] = None
+    ai_error: Optional[str] = None
+
     class Config:
         from_attributes = True
 
@@ -116,3 +120,17 @@ class TicketListQuery(BaseModel):
 class TicketsResponse(BaseModel):
     items: List[TicketRead]
     total: int
+
+
+class TicketAttachmentRead(BaseModel):
+    id: int
+    ticket_id: int
+    filename: str
+    mime_type: str
+    size_bytes: Optional[int] = None
+    storage_path: str
+    created_at: Optional[datetime] = None
+    download_url: Optional[str] = None  # URL для скачивания / просмотра
+
+    class Config:
+        from_attributes = True

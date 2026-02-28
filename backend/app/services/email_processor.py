@@ -15,7 +15,9 @@ _sync_lock = threading.Lock()
 from app.services.email_adapters import ImapEmailFetcher, RawEmailMessage
 from app.services.ai_agent import AIAgent
 from app.services.telegram_service import maybe_send_telegram_alert
-from app.models import Ticket
+from app.services.attachment_storage import save_attachment
+from app.services.attachment_extract import extract_text_from_attachment
+from app.models import Ticket, TicketAttachment
 from app.config import get_settings
 
 
@@ -133,23 +135,54 @@ class EmailProcessor:
 
         print(f"[EmailProcessor] Создан тикет #{ticket.id} (source=email)")
 
-        # 3. AI анализ (если настроен OpenAI)
-        if self.settings.openai_api_key:
-            try:
-                agent = AIAgent(self.db)
-                result = agent.process_ticket(ticket)
-                agent.update_ticket_with_result(ticket, result)
-                self.db.commit()
-                self.db.refresh(ticket)
-                print(f"[EmailProcessor] AI анализ тикета #{ticket.id} завершён")
-                # Telegram: negatif veya Требуется оператор ise tek seferlik bildirim
+        # 2.5. Обработка вложений: сохранение, запись в БД, извлечение текста для AI
+        attachments_summary_parts = []
+        extracted_text_parts = []
+        if getattr(msg, "attachments", None) and msg.attachments:
+            for att in msg.attachments:
                 try:
-                    maybe_send_telegram_alert(self.db, ticket)
-                except Exception as tg_err:
-                    print(f"[EmailProcessor] Telegram bildirimi atlama: {tg_err}")
-            except Exception as e:
-                print(f"[EmailProcessor] Ошибка AI анализа: {e}")
-                # Продолжаем без AI анализа
+                    storage_path = save_attachment(ticket.id, att.filename, att.data)
+                    size_bytes = len(att.data)
+                    self.db.add(TicketAttachment(
+                        ticket_id=ticket.id,
+                        filename=att.filename,
+                        mime_type=att.mime_type,
+                        size_bytes=size_bytes,
+                        storage_path=storage_path,
+                    ))
+                    attachments_summary_parts.append(f"{att.filename} ({att.mime_type}, {size_bytes} bytes)")
+                    success, text_or_note = extract_text_from_attachment(att.filename, att.mime_type, att.data)
+                    if success and (text_or_note or "").strip():
+                        extracted_text_parts.append(f"[{att.filename}]:\n{text_or_note.strip()}")
+                    elif not success and text_or_note:
+                        extracted_text_parts.append(f"[{att.filename}]: {text_or_note}")
+                except Exception as e:
+                    print(f"[EmailProcessor] Ошибка обработки вложения {getattr(att, 'filename', '?')}: {e}")
+                    attachments_summary_parts.append(f"{getattr(att, 'filename', 'attachment')} (ошибка сохранения)")
+            self.db.commit()
+        attachments_summary = "; ".join(attachments_summary_parts) if attachments_summary_parts else ""
+        attachments_extracted_text = "\n\n---\n\n".join(extracted_text_parts) if extracted_text_parts else ""
+
+        # Ticket'a ek metnini ve ai_status kaydet (background'da AI çalışacak)
+        ticket.attachments_text = attachments_extracted_text if attachments_extracted_text else None
+        ticket.ai_status = "pending"
+        ticket.ai_error = None
+        try:
+            self.db.commit()
+            self.db.refresh(ticket)
+        except Exception:
+            self.db.rollback()
+
+        # 3. AI analizi request thread'inde değil background'da çalıştır (takılmayı önlemek için)
+        if self.settings.openai_api_key:
+            threading.Thread(target=_run_process_ticket_ai, args=(ticket.id,), daemon=True).start()
+            print(f"[EmailProcessor] Тикет #{ticket.id}: AI анализ запущен в фоне")
+        else:
+            ticket.ai_status = "done"
+            try:
+                self.db.commit()
+            except Exception:
+                self.db.rollback()
 
         return {
             "status": "ok",
@@ -158,6 +191,56 @@ class EmailProcessor:
             "subject": msg.subject,
             "sender": msg.sender_email
         }
+
+
+def _run_process_ticket_ai(ticket_id: int) -> None:
+    """
+    Background'da çalışır: ticket için AI analizi yapar, ai_status=done/failed yazar.
+    Takılma olmaması için request thread dışında çalışır; hata olursa ai_status=failed + ai_error.
+    """
+    from app.db import SessionLocal
+    db = SessionLocal()
+    try:
+        ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+        if not ticket:
+            return
+        if getattr(ticket, "ai_status", None) != "pending":
+            return
+        # attachments_summary: DB'deki eklerden oluştur
+        atts = db.query(TicketAttachment).filter(TicketAttachment.ticket_id == ticket_id).all()
+        attachments_summary = "; ".join(
+            f"{a.filename} ({a.mime_type}, {a.size_bytes or 0} bytes)" for a in atts
+        )
+        attachments_extracted_text = (ticket.attachments_text or "").strip()
+        agent = AIAgent(db)
+        result = agent.process_ticket(
+            ticket,
+            attachments_summary=attachments_summary,
+            attachments_extracted_text=attachments_extracted_text,
+        )
+        agent.update_ticket_with_result(ticket, result)
+        ticket.ai_status = "done"
+        ticket.ai_error = None
+        db.commit()
+        print(f"[EmailProcessor] Тикет #{ticket_id}: AI анализ завершён (ai_status=done)")
+        try:
+            maybe_send_telegram_alert(db, ticket)
+        except Exception as tg_err:
+            print(f"[EmailProcessor] Telegram skip: {tg_err}")
+    except Exception as e:
+        err_msg = str(e)[:500]
+        print(f"[EmailProcessor] Тикет #{ticket_id}: AI анализ ошибка — {err_msg}")
+        try:
+            ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+            if ticket:
+                ticket.ai_status = "failed"
+                ticket.ai_error = err_msg
+                db.commit()
+        except Exception:
+            db.rollback()
+    finally:
+        db.close()
+    return
 
 
 def fetch_and_process_emails(db: Session) -> List[dict]:

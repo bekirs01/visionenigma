@@ -63,7 +63,9 @@ class AIAgent:
         self,
         subject: str,
         body: str,
-        sender_email: str = ""
+        sender_email: str = "",
+        attachments_summary: str = "",
+        attachments_extracted_text: str = "",
     ) -> AIAgentResult:
         """
         Обрабатывает входящее письмо.
@@ -101,13 +103,15 @@ class AIAgent:
         if kb_context:
             combined_context += kb_context
 
-        # 4. Вызов LLM с объединённым контекстом
+        # 4. Вызов LLM с объединённым контекстом (включая текст из вложений)
         try:
             eris_result = analyze_eris_email(
                 subject=subject,
                 body=body,
                 sender_email=sender_email,
-                kb_context=combined_context  # История + статьи KB
+                kb_context=combined_context,
+                attachments_summary=attachments_summary or "",
+                attachments_extracted_text=attachments_extracted_text or "",
             )
 
             # Определяем confidence на основе найденных источников
@@ -146,12 +150,19 @@ class AIAgent:
                 confidence=0.3
             )
 
-    def process_ticket(self, ticket) -> AIAgentResult:
+    def process_ticket(
+        self,
+        ticket,
+        attachments_summary: str = "",
+        attachments_extracted_text: str = "",
+    ) -> AIAgentResult:
         """
         Обрабатывает тикет из БД.
 
         Args:
             ticket: Объект Ticket из БД
+            attachments_summary: Краткое описание вложений (имя, mime, размер)
+            attachments_extracted_text: Извлечённый из вложений текст для контекста AI
 
         Returns:
             AIAgentResult
@@ -159,7 +170,9 @@ class AIAgent:
         return self.process_email(
             subject=ticket.subject or "",
             body=ticket.body or "",
-            sender_email=ticket.sender_email or ""
+            sender_email=ticket.sender_email or "",
+            attachments_summary=attachments_summary or "",
+            attachments_extracted_text=attachments_extracted_text or "",
         )
 
     def update_ticket_with_result(self, ticket, result: AIAgentResult):

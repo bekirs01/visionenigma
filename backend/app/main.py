@@ -1,7 +1,9 @@
 import threading
 import time
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from app.db import engine, Base, ensure_db_fallback, SessionLocal
 from app import models  # noqa: F401 - tablolar Base.metadata'ya kayıt olsun
 from app.routers import health, categories, tickets, seed, email_stub, ai, admin_auth, analytics, cron
@@ -101,6 +103,11 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["Content-Disposition"],
 )
+
+# Вложения тикетов: uploads/tickets/{id}/...
+_uploads_dir = Path(__file__).resolve().parent.parent / "uploads"
+_uploads_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(_uploads_dir)), name="uploads")
 
 app.include_router(health.router)
 app.include_router(admin_auth.router)

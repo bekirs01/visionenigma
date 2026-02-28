@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import type { Ticket, Category } from "@/app/types";
+import type { Ticket, Category, TicketAttachmentRead } from "@/app/types";
 import { Card, Button, Badge, Alert } from "@/components/ui";
 import { useI18n } from "@/app/i18n/I18nProvider";
 
@@ -20,6 +20,7 @@ export default function TicketDetailPage() {
   const [sendReplyLoading, setSendReplyLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedReply, setEditedReply] = useState("");
+  const [attachments, setAttachments] = useState<TicketAttachmentRead[]>([]);
   const { t } = useI18n();
 
   useEffect(() => {
@@ -61,6 +62,21 @@ export default function TicketDetailPage() {
   useEffect(() => {
     if (adminOk) loadTicket();
   }, [adminOk, loadTicket]);
+
+  const loadAttachments = useCallback(async () => {
+    if (!id) return;
+    try {
+      const clientToken = typeof window !== "undefined" ? localStorage.getItem("support_client_token") : null;
+      const list = await api.getTicketAttachments(id, clientToken ?? undefined);
+      setAttachments(list);
+    } catch {
+      setAttachments([]);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (adminOk && id) loadAttachments();
+  }, [adminOk, id, loadAttachments]);
 
   // Инициализировать редактируемый ответ при загрузке тикета
   useEffect(() => {
@@ -203,6 +219,53 @@ export default function TicketDetailPage() {
           </dl>
         </Card>
 
+        {/* Вложения (email attachments) */}
+        {attachments.length > 0 && (
+          <Card className="p-6 bg-white/90 backdrop-blur-md border-white/50 shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center">
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                </svg>
+              </div>
+              <h2 className="text-lg font-bold text-slate-800">Вложения</h2>
+            </div>
+            <ul className="space-y-3">
+              {attachments.map((att) => (
+                <li key={att.id} className="flex flex-wrap items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="font-medium text-slate-800 truncate flex-1 min-w-0">{att.filename}</span>
+                  <span className="text-xs text-slate-500">
+                    {att.mime_type}
+                    {att.size_bytes != null && ` · ${(att.size_bytes / 1024).toFixed(1)} KB`}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {att.mime_type === "application/pdf" && (
+                      <a
+                        href={att.download_url || `/uploads/${att.storage_path}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-emerald-600 hover:underline"
+                      >
+                        Открыть
+                      </a>
+                    )}
+                    <a
+                      href={att.download_url || `/uploads/${att.storage_path}`}
+                      download={att.filename}
+                      className="inline-flex items-center gap-1 text-sm text-emerald-600 hover:underline"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      Скачать
+                    </a>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        )}
+
         {/* ЭРИС: Извлечённые данные */}
         {(ticket.sender_full_name || ticket.object_name || ticket.device_type || ticket.sentiment || ticket.request_category) && (
           <Card className="p-6 bg-white/90 backdrop-blur-md border-white/50 shadow-xl">
@@ -291,6 +354,19 @@ export default function TicketDetailPage() {
             </div>
             <h2 className="text-lg font-bold text-slate-800">Ответ AI-агента</h2>
           </div>
+
+          {ticket.ai_status === "failed" && (
+            <div className="mb-4 p-4 rounded-xl bg-red-50 border border-red-200">
+              <p className="text-sm font-semibold text-red-800">AI анализ не выполнен</p>
+              <p className="text-sm text-red-700 mt-1">{ticket.ai_error || "Ошибка при разборе вложений или вызове модели."}</p>
+            </div>
+          )}
+
+          {ticket.ai_status === "pending" && !ticket.ai_reply && (
+            <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+              AI анализ выполняется… Обновите страницу через несколько секунд.
+            </div>
+          )}
 
           {ticket.ai_reply ? (
             <div className="space-y-4">

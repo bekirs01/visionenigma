@@ -11,7 +11,7 @@ from email.message import Message as EmailMessage
 from email.utils import parseaddr, parsedate_to_datetime
 from abc import ABC, abstractmethod
 from typing import List, Optional, Tuple
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 import re
 
@@ -76,6 +76,14 @@ def is_email_filtered(sender_email: str, subject: str) -> bool:
 
 
 @dataclass
+class EmailAttachment:
+    """Один вложенный файл из письма."""
+    filename: str
+    mime_type: str
+    data: bytes
+
+
+@dataclass
 class RawEmailMessage:
     """Сырое email сообщение из IMAP."""
     message_id: str
@@ -85,6 +93,7 @@ class RawEmailMessage:
     sender_name: Optional[str]
     received_at: Optional[datetime]
     uid: Optional[str] = None  # UID для пометки как прочитанное
+    attachments: List["EmailAttachment"] = field(default_factory=list)  # Вложения (PDF, изображения и т.д.)
 
 
 class EmailFetcher(ABC):
@@ -199,8 +208,9 @@ class ImapEmailFetcher(EmailFetcher):
                         except:
                             pass
 
-                    # Парсим тело письма
+                    # Парсим тело письма и вложения
                     body = self._get_body(msg)
+                    attachments = self._get_attachments(msg)
 
                     messages.append(RawEmailMessage(
                         message_id=message_id,
@@ -209,7 +219,8 @@ class ImapEmailFetcher(EmailFetcher):
                         sender_email=sender_email,
                         sender_name=sender_name,
                         received_at=received_at,
-                        uid=num.decode()
+                        uid=num.decode(),
+                        attachments=attachments,
                     ))
 
                     # Помечаем как прочитанное
@@ -295,6 +306,38 @@ class ImapEmailFetcher(EmailFetcher):
                 body = str(msg.get_payload())
 
         return body.strip()
+
+    def _get_attachments(self, msg: EmailMessage) -> List[EmailAttachment]:
+        """Извлекает вложения из письма (content-disposition = attachment)."""
+        result: List[EmailAttachment] = []
+        if not msg.is_multipart():
+            return result
+        for part in msg.walk():
+            content_disposition = str(part.get("Content-Disposition", ""))
+            if "attachment" not in content_disposition.lower():
+                continue
+            filename = part.get_filename()
+            if not filename:
+                # Попытка извлечь имя из Content-Type name=
+                ct = part.get("Content-Type", "")
+                if "name=" in ct:
+                    for token in ct.split(";"):
+                        token = token.strip()
+                        if token.lower().startswith("name="):
+                            filename = token[5:].strip(" \"'")
+                            break
+                if not filename:
+                    filename = "attachment.bin"
+            if isinstance(filename, bytes):
+                filename = filename.decode("utf-8", errors="replace")
+            mime_type = part.get_content_type() or "application/octet-stream"
+            try:
+                payload = part.get_payload(decode=True)
+                if payload:
+                    result.append(EmailAttachment(filename=filename, mime_type=mime_type, data=payload))
+            except Exception:
+                continue
+        return result
 
     def _strip_html(self, html: str) -> str:
         """Простая очистка HTML тегов."""

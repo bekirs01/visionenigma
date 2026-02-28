@@ -45,6 +45,7 @@ def ensure_db_fallback():
         SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
         Base.metadata.create_all(bind=engine)
     ensure_ticket_ai_columns()
+    ensure_ticket_attachments_table()
 
 
 def _ticket_columns_sqlite(conn):
@@ -76,6 +77,9 @@ def ensure_ticket_ai_columns():
                 ("operator_required", "ALTER TABLE tickets ADD COLUMN operator_required INTEGER NOT NULL DEFAULT 0" if is_sqlite else "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS operator_required BOOLEAN DEFAULT false"),
                 ("operator_reason", "ALTER TABLE tickets ADD COLUMN operator_reason TEXT" if is_sqlite else "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS operator_reason TEXT"),
                 ("device_info", "ALTER TABLE tickets ADD COLUMN device_info TEXT" if is_sqlite else "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS device_info TEXT"),
+                ("attachments_text", "ALTER TABLE tickets ADD COLUMN attachments_text TEXT" if is_sqlite else "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS attachments_text TEXT"),
+                ("ai_status", "ALTER TABLE tickets ADD COLUMN ai_status VARCHAR(20) NOT NULL DEFAULT 'pending'" if is_sqlite else "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS ai_status VARCHAR(20) NOT NULL DEFAULT 'pending'"),
+                ("ai_error", "ALTER TABLE tickets ADD COLUMN ai_error TEXT" if is_sqlite else "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS ai_error TEXT"),
             ]
             for col_name, sql in adds:
                 if col_name not in cols:
@@ -87,5 +91,57 @@ def ensure_ticket_ai_columns():
                             raise
             if need_commit:
                 conn.commit()
+            # Eski tiкетler: ai_reply doluysa ai_status=done yap (sonsuza kadar pending kalmasın)
+            try:
+                conn.execute(text("UPDATE tickets SET ai_status = 'done' WHERE ai_reply IS NOT NULL AND (ai_status IS NULL OR ai_status = 'pending')"))
+                conn.commit()
+            except Exception:
+                pass
     except Exception:
         pass
+
+
+def _table_exists(conn, table_name: str, is_sqlite: bool) -> bool:
+    if is_sqlite:
+        r = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name=:n"), {"n": table_name})
+    else:
+        r = conn.execute(text(
+            "SELECT 1 FROM information_schema.tables WHERE table_name = :n"
+        ), {"n": table_name})
+    return r.fetchone() is not None
+
+
+def ensure_ticket_attachments_table():
+    """Создаёт таблицу ticket_attachments при отсутствии."""
+    try:
+        with engine.connect() as conn:
+            is_sqlite = "sqlite" in str(engine.url)
+            if _table_exists(conn, "ticket_attachments", is_sqlite):
+                return
+            if is_sqlite:
+                conn.execute(text("""
+                    CREATE TABLE ticket_attachments (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        ticket_id INTEGER NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
+                        filename VARCHAR(512) NOT NULL,
+                        mime_type VARCHAR(128) NOT NULL,
+                        size_bytes INTEGER,
+                        storage_path VARCHAR(1024) NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )
+                """))
+            else:
+                conn.execute(text("""
+                    CREATE TABLE ticket_attachments (
+                        id SERIAL PRIMARY KEY,
+                        ticket_id INTEGER NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
+                        filename VARCHAR(512) NOT NULL,
+                        mime_type VARCHAR(128) NOT NULL,
+                        size_bytes BIGINT,
+                        storage_path VARCHAR(1024) NOT NULL,
+                        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                    )
+                """))
+            conn.commit()
+    except Exception as e:
+        print(f"[DB] ensure_ticket_attachments_table: {e}", flush=True)

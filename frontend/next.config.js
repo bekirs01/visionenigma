@@ -11,6 +11,7 @@ const nextConfig = {
     return [
       { source: "/api/:path*", destination: `${BACKEND_URL}/api/:path*` },
       { source: "/health", destination: `${BACKEND_URL}/health` },
+      { source: "/uploads/:path*", destination: `${BACKEND_URL}/uploads/:path*` },
     ];
   },
   webpack: (config, { dev }) => {

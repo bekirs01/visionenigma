@@ -63,6 +63,14 @@ export const api = {
     return fetchApi<import("@/app/types").Ticket>(`/api/tickets/${id}${q ? `?${q}` : ""}`);
   },
 
+  /** Вложения тикета (email attachments). */
+  getTicketAttachments: (ticketId: number, clientToken?: string) => {
+    const sp = new URLSearchParams();
+    if (clientToken) sp.set("client_token", clientToken);
+    const q = sp.toString();
+    return fetchApi<import("@/app/types").TicketAttachmentRead[]>(`/api/tickets/${ticketId}/attachments${q ? `?${q}` : ""}`);
+  },
+
   deleteTicket: (id: number, clientToken?: string) => {
     const sp = new URLSearchParams();
     if (clientToken) sp.set("client_token", clientToken);

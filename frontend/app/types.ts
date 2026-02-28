@@ -39,6 +39,8 @@ export interface Ticket {
   operator_required?: boolean;
   operator_reason?: string | null;
   device_info?: string | null;
+  ai_status?: string | null;   // pending | done | failed
+  ai_error?: string | null;     // failed ise kısa hata
 }
 
 export interface TicketCreate {
@@ -78,4 +80,15 @@ export interface SuggestReplyResponse {
   provider: string;
   model_version: string;
   analysis_id: number;
+}
+
+export interface TicketAttachmentRead {
+  id: number;
+  ticket_id: number;
+  filename: string;
+  mime_type: string;
+  size_bytes?: number | null;
+  storage_path: string;
+  created_at?: string | null;
+  download_url?: string | null;
 }

@@ -7,8 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Header, B
 from fastapi.responses import StreamingResponse, Response
 from sqlalchemy.orm import Session
 from app.db import get_db
-from app.models import Ticket, Category, AiAnalysis
-from app.schemas import TicketCreate, TicketRead, TicketUpdate, TicketsResponse, AnalyzeResponse, SuggestReplyResponse
+from app.models import Ticket, Category, AiAnalysis, TicketAttachment
+from app.schemas import TicketCreate, TicketRead, TicketUpdate, TicketsResponse, AnalyzeResponse, SuggestReplyResponse, TicketAttachmentRead
 from app.repositories.ticket_repo import TicketRepository
 from app.services.mock_ai import MockAIService
 from app.auth import require_admin, require_admin_dep
@@ -21,25 +21,27 @@ router = APIRouter(prefix="/api", tags=["tickets"])
 
 
 def process_ticket_ai_background(ticket_id: int):
-    """Фоновая обработка тикета AI-агентом."""
+    """Фоновая обработка тикета AI-агентом (ручное создание). ai_status=done/failed."""
     from app.db import SessionLocal
 
     db = SessionLocal()
     try:
         settings = get_settings()
-        if not settings.openai_api_key:
-            print(f"[AI Background] OpenAI ключ не настроен, пропускаем тикет #{ticket_id}")
-            return
-
         ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
         if not ticket:
-            print(f"[AI Background] Тикет #{ticket_id} не найден")
+            return
+        if not settings.openai_api_key:
+            ticket.ai_status = "done"
+            ticket.ai_error = None
+            db.commit()
             return
 
         print(f"[AI Background] Начинаем обработку тикета #{ticket_id}")
         agent = AIAgent(db)
-        result = agent.process_ticket(ticket)
+        result = agent.process_ticket(ticket, attachments_summary="", attachments_extracted_text=(ticket.attachments_text or ""))
         agent.update_ticket_with_result(ticket, result)
+        ticket.ai_status = "done"
+        ticket.ai_error = None
         db.commit()
         print(f"[AI Background] Обработка тикета #{ticket_id} завершена")
         try:
@@ -47,8 +49,16 @@ def process_ticket_ai_background(ticket_id: int):
         except Exception as tg_err:
             print(f"[AI Background] Telegram alert skip: {tg_err}")
     except Exception as e:
-        print(f"[AI Background] Ошибка обработки тикета #{ticket_id}: {e}")
-        db.rollback()
+        err_msg = str(e)[:500]
+        print(f"[AI Background] Ошибка тикета #{ticket_id}: {err_msg}")
+        try:
+            ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+            if ticket:
+                ticket.ai_status = "failed"
+                ticket.ai_error = err_msg
+                db.commit()
+        except Exception:
+            db.rollback()
     finally:
         db.close()
 
@@ -288,6 +298,39 @@ def get_ticket(
         if not token or ticket.client_token != token:
             raise HTTPException(status_code=403, detail="Нет доступа к этому обращению")
     return ticket
+
+
+@router.get("/tickets/{ticket_id}/attachments", response_model=List[TicketAttachmentRead])
+def get_ticket_attachments(
+    ticket_id: int,
+    request: Request,
+    client_token: Optional[str] = Query(None),
+    x_client_token: Optional[str] = Header(None, alias="X-Client-Token"),
+    db: Session = Depends(get_db),
+):
+    """Список вложений тикета. Доступ: админ или владелец по client_token."""
+    ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    if not require_admin(request):
+        token = (client_token or x_client_token or "").strip()
+        if not token or ticket.client_token != token:
+            raise HTTPException(status_code=403, detail="Нет доступа к этому обращению")
+    rows = db.query(TicketAttachment).filter(TicketAttachment.ticket_id == ticket_id).order_by(TicketAttachment.id).all()
+    base_url = str(request.base_url).rstrip("/")
+    return [
+        TicketAttachmentRead(
+            id=r.id,
+            ticket_id=r.ticket_id,
+            filename=r.filename,
+            mime_type=r.mime_type,
+            size_bytes=r.size_bytes,
+            storage_path=r.storage_path,
+            created_at=r.created_at,
+            download_url=f"{base_url}/uploads/{r.storage_path}",
+        )
+        for r in rows
+    ]
 
 
 @router.delete("/tickets/{ticket_id}")

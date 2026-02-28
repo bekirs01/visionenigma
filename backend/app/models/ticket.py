@@ -66,6 +66,13 @@ class Ticket(Base):
     # Telegram: acil bildirim bir kez gönderildi mi (spam önleme)
     telegram_notified_at = Column(DateTime(timezone=True), nullable=True)
 
+    # Eklerden çıkarılan metin (AI input için birleşik)
+    attachments_text = Column(Text, nullable=True)
+    # AI analiz durumu: pending | done | failed (takılı kalmayı önlemek için)
+    ai_status = Column(String(20), nullable=False, default="pending", index=True)
+    ai_error = Column(Text, nullable=True)  # failed ise kısa hata mesajı
+
     category = relationship("Category", back_populates="tickets")
     messages = relationship("Message", back_populates="ticket", cascade="all, delete-orphan")
     ai_analyses = relationship("AiAnalysis", back_populates="ticket", cascade="all, delete-orphan")
+    attachments = relationship("TicketAttachment", back_populates="ticket", cascade="all, delete-orphan")
