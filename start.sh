@@ -28,8 +28,7 @@ fi
 
 echo "[2/5] Backend başlatılıyor (http://localhost:8000)..."
 cd backend
-# Yerel çalışma: SQLite kullan (Supabase ağ hatası Internal Server Error önlenir)
-export USE_SQLITE=1
+# .env'deki DATABASE_URL kullanılır (Supabase). SQLite istersen: export USE_SQLITE=1
 ./venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
 BACKEND_PID=$!
 cd ..
