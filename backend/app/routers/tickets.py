@@ -3,7 +3,7 @@ import csv
 import json
 from datetime import datetime
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Header, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Header, BackgroundTasks, UploadFile, File
 from fastapi.responses import StreamingResponse, Response
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -16,6 +16,8 @@ from app.auth import require_admin, require_admin_dep
 from app.services.ai_agent import AIAgent
 from app.services.device_extract import extract_device_model
 from app.services.telegram_service import maybe_send_telegram_alert
+from app.services.attachment_storage import save_attachment
+from app.services.attachment_extract import extract_text_from_attachment
 from app.config import get_settings
 
 router = APIRouter(prefix="/api", tags=["tickets"])
@@ -340,6 +342,147 @@ def get_ticket(
         if not token or ticket.client_token != token:
             raise HTTPException(status_code=403, detail="Нет доступа к этому обращению")
     return ticket
+
+
+ALLOWED_MIME_TYPES = {
+    "application/pdf",
+    "image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "text/plain", "text/csv",
+    "application/octet-stream",
+}
+ALLOWED_EXTENSIONS = {
+    ".pdf", ".jpg", ".jpeg", ".png", ".webp", ".gif",
+    ".doc", ".docx", ".xls", ".xlsx", ".txt", ".csv",
+}
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB per file
+MAX_FILES_PER_UPLOAD = 5
+
+
+def _rerun_ai_with_attachments(ticket_id: int):
+    """Re-process AI after new attachments are uploaded (web form)."""
+    from app.db import SessionLocal
+
+    db = SessionLocal()
+    try:
+        ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+        if not ticket:
+            return
+        atts = db.query(TicketAttachment).filter(TicketAttachment.ticket_id == ticket_id).all()
+        if not atts:
+            return
+
+        from app.services.attachment_storage import UPLOADS_DIR
+        summary_parts = []
+        extracted_parts = []
+        for att in atts:
+            summary_parts.append(f"- {att.filename} ({att.mime_type}, {(att.size_bytes or 0) / 1024:.1f} KB)")
+            file_path = UPLOADS_DIR / att.storage_path
+            if file_path.exists():
+                data = file_path.read_bytes()
+                ok, text = extract_text_from_attachment(att.filename, att.mime_type, data)
+                if text and text.strip():
+                    extracted_parts.append(f"[{att.filename}]\n{text}")
+
+        attachments_summary = "\n".join(summary_parts)
+        attachments_extracted_text = "\n\n".join(extracted_parts)
+        ticket.attachments_text = attachments_extracted_text or None
+
+        settings = get_settings()
+        if settings.openai_api_key:
+            agent = AIAgent(db)
+            result = agent.process_ticket(
+                ticket,
+                attachments_summary=attachments_summary,
+                attachments_extracted_text=attachments_extracted_text,
+            )
+            agent.update_ticket_with_result(ticket, result)
+            ticket.ai_status = "done"
+            ticket.ai_error = None
+        db.commit()
+    except Exception as e:
+        print(f"[Attachment AI] Error re-processing ticket #{ticket_id}: {e}")
+        try:
+            db.rollback()
+        except Exception:
+            pass
+    finally:
+        db.close()
+
+
+@router.post("/tickets/{ticket_id}/attachments", response_model=List[TicketAttachmentRead])
+def upload_ticket_attachments(
+    ticket_id: int,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    files: List[UploadFile] = File(...),
+    client_token: Optional[str] = Query(None),
+    x_client_token: Optional[str] = Header(None, alias="X-Client-Token"),
+    db: Session = Depends(get_db),
+):
+    """Upload file attachments to a ticket. Access: admin or owner via client_token."""
+    ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    if not require_admin(request):
+        token = (client_token or x_client_token or "").strip()
+        if not token or ticket.client_token != token:
+            raise HTTPException(status_code=403, detail="Нет доступа к этому обращению")
+
+    if len(files) > MAX_FILES_PER_UPLOAD:
+        raise HTTPException(status_code=400, detail=f"Максимум {MAX_FILES_PER_UPLOAD} файлов за раз")
+
+    results: List[TicketAttachmentRead] = []
+    base_url = str(request.base_url).rstrip("/")
+
+    for f in files:
+        fname = f.filename or "attachment"
+        mime = (f.content_type or "application/octet-stream").lower()
+        ext = fname.lower()[fname.rfind("."):] if "." in fname else ""
+        if mime not in ALLOWED_MIME_TYPES and ext not in ALLOWED_EXTENSIONS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Тип файла '{fname}' ({mime}) не поддерживается. Допустимые: PDF, JPG, PNG, DOCX, XLS, TXT, CSV.",
+            )
+        data = f.file.read()
+        if len(data) > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Файл '{fname}' превышает лимит {MAX_FILE_SIZE // (1024 * 1024)} MB",
+            )
+
+        storage_path = save_attachment(ticket_id, fname, data)
+        att = TicketAttachment(
+            ticket_id=ticket_id,
+            filename=fname,
+            mime_type=mime,
+            size_bytes=len(data),
+            storage_path=storage_path,
+        )
+        db.add(att)
+        db.flush()
+
+        results.append(
+            TicketAttachmentRead(
+                id=att.id,
+                ticket_id=att.ticket_id,
+                filename=att.filename,
+                mime_type=att.mime_type,
+                size_bytes=att.size_bytes,
+                storage_path=att.storage_path,
+                created_at=att.created_at,
+                download_url=f"{base_url}/uploads/{att.storage_path}",
+            )
+        )
+
+    db.commit()
+
+    background_tasks.add_task(_rerun_ai_with_attachments, ticket_id)
+
+    return results
 
 
 @router.get("/tickets/{ticket_id}/attachments", response_model=List[TicketAttachmentRead])

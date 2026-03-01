@@ -83,6 +83,26 @@ export const api = {
     return fetchApi<import("@/app/types").TicketAttachmentRead[]>(`/api/tickets/${ticketId}/attachments${q ? `?${q}` : ""}`);
   },
 
+  uploadTicketAttachments: async (ticketId: number, files: File[], clientToken?: string): Promise<import("@/app/types").TicketAttachmentRead[]> => {
+    const formData = new FormData();
+    files.forEach((f) => formData.append("files", f));
+    const sp = new URLSearchParams();
+    if (clientToken) sp.set("client_token", clientToken);
+    const q = sp.toString();
+    const url = `${API_BASE}/api/tickets/${ticketId}/attachments${q ? `?${q}` : ""}`;
+    const res = await fetch(url, {
+      method: "POST",
+      credentials: "include",
+      cache: "no-store",
+      body: formData,
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || `Upload failed: ${res.status}`);
+    }
+    return res.json();
+  },
+
   deleteTicket: (id: number, clientToken?: string) => {
     const sp = new URLSearchParams();
     if (clientToken) sp.set("client_token", clientToken);

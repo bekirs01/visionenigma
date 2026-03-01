@@ -32,12 +32,45 @@ def extract_text_from_attachment(filename: str, mime_type: str, data: bytes) -> 
     if any(x in mime for x in ("image/jpeg", "image/jpg", "image/png", "image/webp")):
         return _extract_image(data)
 
+    # DOCX
+    if fn.endswith(".docx") or "wordprocessingml" in mime:
+        return _extract_docx(data)
+
+    # DOC (eski format) - cikaramiyoruz ama bilgi veriyoruz
+    if fn.endswith(".doc") or "msword" in mime:
+        return False, "Получен файл в формате .doc. Для автоматического анализа рекомендуем формат .docx или PDF."
+
     # Видео — не анализируем
     if "video/" in mime or fn.endswith((".mp4", ".webm", ".mov", ".avi")):
         return False, "Получено видео-вложение. Анализ видео не выполняется; оператор просмотрит вручную."
 
-    # Остальные типы (doc, xls и т.д.) — не извлекаем
+    # Остальные типы (xls и т.д.) — не извлекаем
     return False, "Вложение получено, но автоматическое извлечение текста для данного формата не поддерживается. Попросите клиента описать содержание текстом или прислать PDF/изображение."
+
+
+def _extract_docx(data: bytes) -> Tuple[bool, str]:
+    """DOCX: python-docx ile paragraf metinlerini cikarir."""
+    try:
+        from docx import Document
+        from io import BytesIO
+        doc = Document(BytesIO(data))
+        parts = []
+        for para in doc.paragraphs:
+            t = para.text
+            if t and t.strip():
+                parts.append(t.strip())
+        # Tablolardan da metin cikar
+        for table in doc.tables:
+            for row in table.rows:
+                cells = [cell.text.strip() for cell in row.cells if cell.text.strip()]
+                if cells:
+                    parts.append(" | ".join(cells))
+        text = "\n\n".join(parts) if parts else ""
+        if text.strip():
+            return True, _truncate_safe(text.strip())
+        return True, ""
+    except Exception:
+        return False, "DOCX dosyasi acilamadi. Lutfen icerigi metin olarak gonderin."
 
 
 def _extract_pdf(data: bytes) -> Tuple[bool, str]:

@@ -58,6 +58,7 @@ export default function UserFormPage() {
   const [phone, setPhone] = useState("");
   const [message, setMessage] = useState("");
   const [organization, setOrganization] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
@@ -119,6 +120,36 @@ export default function UserFormPage() {
     }
   };
 
+  const ALLOWED_EXTENSIONS = [".pdf", ".jpg", ".jpeg", ".png", ".webp", ".gif", ".doc", ".docx", ".xls", ".xlsx", ".txt", ".csv"];
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+  const MAX_FILES = 5;
+
+  const handleFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(e.target.files || []);
+    const total = files.length + selected.length;
+    if (total > MAX_FILES) {
+      setError(`Максимум ${MAX_FILES} файлов`);
+      return;
+    }
+    for (const f of selected) {
+      if (f.size > MAX_FILE_SIZE) {
+        setError(`Файл "${f.name}" превышает 10 MB`);
+        return;
+      }
+      const ext = f.name.toLowerCase().slice(f.name.lastIndexOf("."));
+      if (!ALLOWED_EXTENSIONS.includes(ext)) {
+        setError(`Тип файла "${ext}" не поддерживается`);
+        return;
+      }
+    }
+    setFiles((prev) => [...prev, ...selected]);
+    e.target.value = "";
+  };
+
+  const removeFile = (idx: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== idx));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -127,7 +158,8 @@ export default function UserFormPage() {
     setSubmitting(true);
     setError(null);
     try {
-      await api.createTicket({
+      const clientToken = getOrCreateClientToken();
+      const ticket = await api.createTicket({
         sender_email: email,
         sender_name: fullName,
         subject: `Обращение от ${fullName}`,
@@ -135,19 +167,28 @@ export default function UserFormPage() {
         status: "not_completed",
         priority: "medium",
         source: "manual",
-        client_token: getOrCreateClientToken(),
+        client_token: clientToken,
         sender_full_name: fullName,
         sender_phone: phone.replace(/\D/g, ''),
         object_name: organization || undefined,
         device_info: getDeviceInfo(),
       });
+
+      if (files.length > 0 && ticket?.id) {
+        try {
+          await api.uploadTicketAttachments(ticket.id, files, clientToken);
+        } catch (uploadErr) {
+          console.error("Attachment upload error:", uploadErr);
+        }
+      }
+
       setSent(true);
       setFullName("");
       setEmail("");
       setPhone("");
       setMessage("");
       setOrganization("");
-      // Прокрутка вверх страницы
+      setFiles([]);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (e) {
       setError(e instanceof Error ? e.message : t("sendError"));
@@ -345,6 +386,64 @@ export default function UserFormPage() {
                 placeholder="Название предприятия или объекта"
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"
               />
+            </div>
+
+            {/* Файлы (необязательно) */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                  </svg>
+                  Прикрепить файлы <span className="text-slate-400 text-xs">(необязательно, макс. {MAX_FILES} файлов по 10 MB)</span>
+                </div>
+              </label>
+              <div className="relative">
+                <input
+                  type="file"
+                  multiple
+                  accept={ALLOWED_EXTENSIONS.join(",")}
+                  onChange={handleFilesChange}
+                  className="hidden"
+                  id="file-upload"
+                  disabled={files.length >= MAX_FILES}
+                />
+                <label
+                  htmlFor="file-upload"
+                  className={`flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl border-2 border-dashed transition-all cursor-pointer ${
+                    files.length >= MAX_FILES
+                      ? "border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed"
+                      : "border-indigo-200 bg-indigo-50/50 text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50"
+                  }`}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                  </svg>
+                  <span className="text-sm font-medium">Выберите файлы или перетащите сюда</span>
+                </label>
+              </div>
+              {files.length > 0 && (
+                <ul className="mt-3 space-y-2">
+                  {files.map((f, i) => (
+                    <li key={i} className="flex items-center gap-3 p-2.5 rounded-lg bg-indigo-50/70 border border-indigo-100">
+                      <svg className="w-4 h-4 text-indigo-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <span className="text-sm text-slate-700 truncate flex-1">{f.name}</span>
+                      <span className="text-xs text-slate-500 flex-shrink-0">{(f.size / 1024).toFixed(0)} KB</span>
+                      <button
+                        type="button"
+                        onClick={() => removeFile(i)}
+                        className="text-red-400 hover:text-red-600 transition-colors flex-shrink-0"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             <Button

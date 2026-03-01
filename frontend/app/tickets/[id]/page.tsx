@@ -231,37 +231,44 @@ export default function TicketDetailPage() {
               <h2 className="text-lg font-bold text-slate-800">Вложения</h2>
             </div>
             <ul className="space-y-3">
-              {attachments.map((att) => (
-                <li key={att.id} className="flex flex-wrap items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200">
-                  <span className="font-medium text-slate-800 truncate flex-1 min-w-0">{att.filename}</span>
-                  <span className="text-xs text-slate-500">
-                    {att.mime_type}
-                    {att.size_bytes != null && ` · ${(att.size_bytes / 1024).toFixed(1)} KB`}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    {att.mime_type === "application/pdf" && (
-                      <a
-                        href={att.download_url || `/uploads/${att.storage_path}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-emerald-600 hover:underline"
-                      >
-                        Открыть
+              {attachments.map((att) => {
+                const url = att.download_url || `/uploads/${att.storage_path}`;
+                const isImage = /^image\/(jpeg|jpg|png|webp|gif)$/i.test(att.mime_type);
+                const isPdf = att.mime_type === "application/pdf";
+                return (
+                  <li key={att.id} className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                    {isImage && (
+                      <a href={url} target="_blank" rel="noopener noreferrer" className="block mb-3">
+                        <img
+                          src={url}
+                          alt={att.filename}
+                          className="max-h-48 rounded-lg border border-slate-200 object-contain bg-white"
+                        />
                       </a>
                     )}
-                    <a
-                      href={att.download_url || `/uploads/${att.storage_path}`}
-                      download={att.filename}
-                      className="inline-flex items-center gap-1 text-sm text-emerald-600 hover:underline"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                      </svg>
-                      Скачать
-                    </a>
-                  </div>
-                </li>
-              ))}
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="font-medium text-slate-800 truncate flex-1 min-w-0">{att.filename}</span>
+                      <span className="text-xs text-slate-500">
+                        {att.mime_type}
+                        {att.size_bytes != null && ` · ${(att.size_bytes / 1024).toFixed(1)} KB`}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {(isPdf || isImage) && (
+                          <a href={url} target="_blank" rel="noopener noreferrer" className="text-sm text-emerald-600 hover:underline">
+                            Открыть
+                          </a>
+                        )}
+                        <a href={url} download={att.filename} className="inline-flex items-center gap-1 text-sm text-emerald-600 hover:underline">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          </svg>
+                          Скачать
+                        </a>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           </Card>
         )}
