@@ -22,7 +22,12 @@ export default function AdminLoginPage() {
       await api.adminLogin(code);
       router.push("/admin/panel");
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("loginFailed"));
+      const raw = err instanceof Error ? err.message : "";
+      if (raw.includes("401") || raw.includes("403") || raw.includes("Неверный")) {
+        setError("Неверный код администратора. Попробуйте ещё раз.");
+      } else {
+        setError(raw || "Ошибка входа. Попробуйте позже.");
+      }
     } finally {
       setLoading(false);
     }

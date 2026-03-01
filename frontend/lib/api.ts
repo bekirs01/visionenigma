@@ -22,7 +22,19 @@ async function fetchApi<T>(
   }
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(text || `HTTP ${res.status}`);
+    let msg = `HTTP ${res.status}`;
+    if (text) {
+      try {
+        const json = JSON.parse(text);
+        msg = json.detail || json.message || json.error || text;
+      } catch {
+        msg = text;
+      }
+    }
+    if (res.status === 401 || res.status === 403) {
+      msg = "Неверный код администратора";
+    }
+    throw new Error(msg);
   }
   const contentType = res.headers.get("content-type");
   const text = await res.text();
