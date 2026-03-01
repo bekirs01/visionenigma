@@ -426,37 +426,33 @@ export default function AnalyticsPage() {
             {/* Alt KPI'lar */}
             <section className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {summary?.avg_response_hours != null && (
-                <div
-                  className="bg-white rounded-2xl p-6 transition-all duration-300 hover:-translate-y-0.5"
-                  style={{ border: "1px solid rgba(226,232,240,0.8)", boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px -2px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.9)" }}
-                >
-                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Среднее время ответа</p>
-                  <p className="text-3xl font-bold tabular-nums text-emerald-600">
-                    {summary.avg_response_hours < 1
-                      ? `${Math.round(summary.avg_response_hours * 60)} мин`
-                      : `${summary.avg_response_hours.toFixed(1)} ч`}
-                  </p>
+                <div className="relative bg-white rounded-2xl p-6 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_-6px_rgba(0,0,0,0.12)]" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 12px -2px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.9)" }}>
+                  <div className="absolute inset-0 rounded-2xl border border-slate-200/80" />
+                  <div className="relative">
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Среднее время ответа</p>
+                    <p className="text-3xl font-bold tabular-nums text-emerald-600">
+                      {summary.avg_response_hours < 1
+                        ? `${Math.round(summary.avg_response_hours * 60)} мин`
+                        : `${summary.avg_response_hours.toFixed(1)} ч`}
+                    </p>
+                  </div>
                 </div>
               )}
-              <div
-                className="bg-white rounded-2xl p-6 transition-all duration-300 hover:-translate-y-0.5"
-                style={{ border: "1px solid rgba(226,232,240,0.8)", boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px -2px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.9)" }}
-              >
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">За эту неделю</p>
-                <p className="text-3xl font-bold tabular-nums text-slate-800">
-                  {summary?.week_tickets ?? 0}
-                </p>
-                <p className="text-sm text-slate-500 mt-1">обращений</p>
+              <div className="relative bg-white rounded-2xl p-6 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_-6px_rgba(0,0,0,0.12)]" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 12px -2px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.9)" }}>
+                <div className="absolute inset-0 rounded-2xl border border-slate-200/80" />
+                <div className="relative">
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">За эту неделю</p>
+                  <p className="text-3xl font-bold tabular-nums text-slate-800">{summary?.week_tickets ?? 0}</p>
+                  <p className="text-sm text-slate-500 mt-1">обращений</p>
+                </div>
               </div>
-              <div
-                className="bg-white rounded-2xl p-6 transition-all duration-300 hover:-translate-y-0.5"
-                style={{ border: "1px solid rgba(226,232,240,0.8)", boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px -2px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.9)" }}
-              >
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Сегодня</p>
-                <p className="text-3xl font-bold tabular-nums text-slate-800">
-                  {summary?.today_tickets ?? 0}
-                </p>
-                <p className="text-sm text-slate-500 mt-1">новых обращений</p>
+              <div className="relative bg-white rounded-2xl p-6 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_-6px_rgba(0,0,0,0.12)]" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 12px -2px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.9)" }}>
+                <div className="absolute inset-0 rounded-2xl border border-slate-200/80" />
+                <div className="relative">
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Сегодня</p>
+                  <p className="text-3xl font-bold tabular-nums text-slate-800">{summary?.today_tickets ?? 0}</p>
+                  <p className="text-sm text-slate-500 mt-1">новых обращений</p>
+                </div>
               </div>
             </section>
           </>
