@@ -21,7 +21,7 @@ export function TimelineArea({ data }: { data: TimelineStat[] }) {
               title={`${day.date}: ${day.count}`}
             >
               <div
-                className="w-full min-h-[3px] rounded-t bg-gradient-to-t from-violet-600 to-violet-400 transition-all duration-200 hover:from-violet-700 hover:to-violet-500"
+                className="w-full min-h-[3px] rounded-t bg-gradient-to-t from-emerald-600 to-emerald-400 transition-all duration-200 hover:from-emerald-700 hover:to-emerald-500"
                 style={{ height: `${Math.max(height, 3)}%` }}
               />
               {idx % 5 === 0 && (

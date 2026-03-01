@@ -27,7 +27,7 @@ export function BarChartHorizontal({
               {item.value} ({item.percentage}%)
             </span>
           </div>
-          <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+          <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-500 ${barClass}`}
               style={{ width: `${Math.max(item.percentage, 2)}%` }}

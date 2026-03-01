@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { Button, Alert } from "@/components/ui";
+import { Alert } from "@/components/ui";
 import {
   KpiCard,
   ChartCard,
@@ -162,75 +162,83 @@ export default function AnalyticsPage() {
 
   if (!isAdmin) {
     return (
-      <div className="flex min-h-screen items-center justify-center gap-3 bg-gradient-to-br from-slate-50 via-violet-50/30 to-slate-50 text-slate-500">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-violet-200 border-t-violet-600" />
+      <div className="flex min-h-screen items-center justify-center gap-3 bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 text-slate-500">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-200 border-t-emerald-600" />
         <span className="font-medium">Проверка доступа...</span>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen overflow-hidden bg-[#f8fafc]">
-      <header className="sticky top-0 z-10 border-b border-slate-200/90 bg-white/90 backdrop-blur-md">
-        <div className="mx-auto max-w-[1440px] px-6 py-5 lg:px-8">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/30 to-teal-50/20">
+      {/* Header */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col gap-4 py-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-4">
               <Link
                 href="/admin/panel"
-                className="inline-flex items-center gap-2 text-sm font-medium text-violet-600 hover:text-violet-700 transition-colors mb-1.5"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
               >
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
-                Назад к тикетам
+                К тикетам
               </Link>
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900">Аналитика</h1>
-              <p className="text-sm text-slate-500 mt-0.5">Статистика обращений</p>
+              <div className="h-6 w-px bg-slate-200" />
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-sm">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-slate-800">Аналитика</h1>
+                  <p className="text-xs text-slate-400">Статистика обращений</p>
+                </div>
+              </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              <div className="inline-flex rounded-xl bg-slate-100/80 p-0.5" role="group" aria-label="Период">
+              <div className="inline-flex rounded-xl bg-slate-100 p-1" role="group">
                 {PERIOD_OPTIONS.map(({ label, days }) => (
                   <button
                     key={days}
                     onClick={() => setPeriodDays(days)}
-                    className={`rounded-lg px-4 py-2 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-violet-400/40 focus:ring-offset-1 ${
+                    className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
                       periodDays === days
                         ? "bg-white text-slate-900 shadow-sm"
-                        : "text-slate-600 hover:text-slate-800"
+                        : "text-slate-500 hover:text-slate-700"
                     }`}
                   >
                     {label}
                   </button>
                 ))}
               </div>
-              <Button
-                variant="secondary"
+              <button
                 onClick={loadAnalytics}
                 disabled={loading}
-                className="shrink-0 rounded-xl border-slate-200"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-50 transition-colors shadow-sm"
               >
                 {loading ? (
                   <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
                 ) : (
-                  <>
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    Обновить
-                  </>
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
                 )}
-              </Button>
-              <div className="flex gap-1.5 border-l border-slate-200 pl-3">
+                Обновить
+              </button>
+              <div className="h-6 w-px bg-slate-200" />
+              <div className="flex gap-1.5">
                 <button
                   type="button"
                   onClick={handleExportCsv}
                   disabled={loading}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-violet-400/40 disabled:opacity-50 transition-colors"
-                  title="Экспорт CSV"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors shadow-sm"
                 >
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0118 19v-4" />
+                  <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
                   CSV
                 </button>
@@ -238,11 +246,10 @@ export default function AnalyticsPage() {
                   type="button"
                   onClick={handleExportXlsx}
                   disabled={loading}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-violet-400/40 disabled:opacity-50 transition-colors"
-                  title="Экспорт XLSX"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 transition-colors shadow-sm"
                 >
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0118 19v-4" />
+                  <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
                   XLSX
                 </button>
@@ -252,33 +259,35 @@ export default function AnalyticsPage() {
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto max-w-[1440px] px-6 py-8 lg:px-8">
+      {/* Main */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {error && (
-          <Alert variant="error" className="mb-6" onRetry={loadAnalytics}>
+          <Alert variant="error" className="mb-2" onRetry={loadAnalytics}>
             {error}
           </Alert>
         )}
 
         {loading ? (
           <>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-8">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
               {[1, 2, 3, 4].map((i) => (
                 <KpiSkeleton key={i} />
               ))}
             </div>
-            <div className="grid grid-cols-1 gap-6 xl:grid-cols-12 mb-8">
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
               <div className="xl:col-span-8"><ChartSkeleton /></div>
               <div className="xl:col-span-4 space-y-6"><ChartSkeleton /><ChartSkeleton /></div>
             </div>
           </>
         ) : (
           <>
-            <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-8">
+            {/* KPI Kartlari */}
+            <section className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
               <KpiCard
                 title="Всего тикетов"
                 value={summary?.total_tickets ?? 0}
                 subtitle={`сегодня: ${summary?.today_tickets ?? 0}`}
-                accentClass="bg-slate-100 text-slate-600"
+                accentClass="bg-emerald-50 text-emerald-600"
                 icon={
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -293,7 +302,7 @@ export default function AnalyticsPage() {
                     ? `${Math.round((summary.completed / summary.total_tickets) * 100)}% от всех`
                     : undefined
                 }
-                accentClass="bg-emerald-100 text-emerald-600"
+                accentClass="bg-teal-50 text-teal-600"
                 icon={
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -304,7 +313,7 @@ export default function AnalyticsPage() {
                 title="В работе"
                 value={summary?.not_completed ?? 0}
                 subtitle="Требуют обработки"
-                accentClass="bg-amber-100 text-amber-600"
+                accentClass="bg-amber-50 text-amber-600"
                 icon={
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -315,7 +324,7 @@ export default function AnalyticsPage() {
                 title="Требуют оператора"
                 value={summary?.operator_required ?? 0}
                 subtitle={operatorStats ? `${operatorStats.percentage}% от всех` : undefined}
-                accentClass="bg-rose-100 text-rose-600"
+                accentClass="bg-rose-50 text-rose-600"
                 icon={
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -324,7 +333,8 @@ export default function AnalyticsPage() {
               />
             </section>
 
-            <section className="grid grid-cols-1 gap-6 xl:grid-cols-12 mb-8">
+            {/* Timeline + Kaynak + Tonalite */}
+            <section className="grid grid-cols-1 gap-6 xl:grid-cols-12">
               <div className="xl:col-span-8">
                 <ChartCard title={`Тикеты за период (${periodDays} дн.)`}>
                   {timelineFiltered.length > 0 ? (
@@ -337,14 +347,14 @@ export default function AnalyticsPage() {
               <div className="xl:col-span-4 space-y-6">
                 <ChartCard title="По источнику">
                   {bySource.length > 0 ? (
-                    <div className="space-y-2">
+                    <div className="space-y-2.5">
                       {bySource.map((item, idx) => (
                         <div
                           key={idx}
-                          className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2.5"
+                          className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-3"
                         >
                           <span className="text-sm font-medium text-slate-700">{item.source}</span>
-                          <span className="shrink-0 rounded-md bg-slate-200/80 px-2 py-0.5 text-xs font-medium tabular-nums text-slate-600">
+                          <span className="shrink-0 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200/60 px-2.5 py-0.5 text-xs font-semibold tabular-nums">
                             {item.count}
                           </span>
                         </div>
@@ -356,16 +366,16 @@ export default function AnalyticsPage() {
                 </ChartCard>
                 <ChartCard title="По тональности">
                   {bySentiment.length > 0 ? (
-                    <div className="space-y-3.5">
+                    <div className="space-y-4">
                       {bySentiment.map((item, idx) => (
                         <div key={idx}>
-                          <div className="flex items-center justify-between gap-2 mb-1">
+                          <div className="flex items-center justify-between gap-2 mb-1.5">
                             <span className="text-sm font-medium text-slate-700">{item.sentiment}</span>
-                            <span className="shrink-0 rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium tabular-nums text-slate-600">
+                            <span className="shrink-0 text-xs font-medium tabular-nums text-slate-500">
                               {item.count} ({item.percentage}%)
                             </span>
                           </div>
-                          <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                          <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
                             <div
                               className={`h-full rounded-full transition-all duration-500 ${SENTIMENT_COLORS[item.sentiment] ?? "bg-slate-300"}`}
                               style={{ width: `${Math.max(item.percentage, 2)}%` }}
@@ -381,12 +391,13 @@ export default function AnalyticsPage() {
               </div>
             </section>
 
-            <section className="grid grid-cols-1 gap-6 xl:grid-cols-2 mb-8">
+            {/* Kategoriler + Eskalasyon */}
+            <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
               <ChartCard title="По категориям">
                 {byCategory.length > 0 ? (
                   <BarChartHorizontal
-                    data={byCategory.map((c) => ({ label: c.category, value: c.count, percentage: c.percentage }))}
-                    barClass="bg-violet-500"
+                    data={byCategory.map((c) => ({ label: c.category.replace(/_/g, " "), value: c.count, percentage: c.percentage }))}
+                    barClass="bg-emerald-500"
                     maxItems={8}
                   />
                 ) : (
@@ -412,22 +423,41 @@ export default function AnalyticsPage() {
               </ChartCard>
             </section>
 
-            <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {/* Alt KPI'lar */}
+            <section className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {summary?.avg_response_hours != null && (
-                <ChartCard title="Среднее время ответа" className="sm:col-span-2 xl:col-span-1">
-                  <p className="text-2xl font-bold tabular-nums text-violet-600">
+                <div
+                  className="bg-white rounded-2xl p-6 transition-all duration-300 hover:-translate-y-0.5"
+                  style={{ border: "1px solid rgba(226,232,240,0.8)", boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px -2px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.9)" }}
+                >
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Среднее время ответа</p>
+                  <p className="text-3xl font-bold tabular-nums text-emerald-600">
                     {summary.avg_response_hours < 1
                       ? `${Math.round(summary.avg_response_hours * 60)} мин`
                       : `${summary.avg_response_hours.toFixed(1)} ч`}
                   </p>
-                </ChartCard>
+                </div>
               )}
-              <ChartCard title="За эту неделю">
+              <div
+                className="bg-white rounded-2xl p-6 transition-all duration-300 hover:-translate-y-0.5"
+                style={{ border: "1px solid rgba(226,232,240,0.8)", boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px -2px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.9)" }}
+              >
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">За эту неделю</p>
                 <p className="text-3xl font-bold tabular-nums text-slate-800">
                   {summary?.week_tickets ?? 0}
                 </p>
-                <p className="text-sm text-slate-500">обращений</p>
-              </ChartCard>
+                <p className="text-sm text-slate-500 mt-1">обращений</p>
+              </div>
+              <div
+                className="bg-white rounded-2xl p-6 transition-all duration-300 hover:-translate-y-0.5"
+                style={{ border: "1px solid rgba(226,232,240,0.8)", boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px -2px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.9)" }}
+              >
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Сегодня</p>
+                <p className="text-3xl font-bold tabular-nums text-slate-800">
+                  {summary?.today_tickets ?? 0}
+                </p>
+                <p className="text-sm text-slate-500 mt-1">новых обращений</p>
+              </div>
             </section>
           </>
         )}
