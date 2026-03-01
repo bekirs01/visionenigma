@@ -30,11 +30,12 @@ export default function AdminPanelPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [requestCategories, setRequestCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [sortByDate, setSortByDate] = useState<"created_at_desc" | "created_at_asc" | "priority">("created_at_desc");
   const [exportLoading, setExportLoading] = useState(false);
   const [xlsxLoading, setXlsxLoading] = useState(false);
   const [syncLoading, setSyncLoading] = useState(false);
@@ -46,30 +47,6 @@ export default function AdminPanelPage() {
   const [pageSize, setPageSize] = useState(15);
   const [totalCount, setTotalCount] = useState(0);
 
-  // 20 категорий запросов (whitelist, как в backend)
-  const requestCategories = [
-    { value: "неисправность", label: "Неисправность" },
-    { value: "калибровка", label: "Калибровка" },
-    { value: "запрос_документации", label: "Запрос документации" },
-    { value: "гарантия", label: "Гарантия" },
-    { value: "замена_датчика", label: "Замена датчика" },
-    { value: "консультация", label: "Консультация" },
-    { value: "экзамен", label: "Экзамен / аттестация" },
-    { value: "пересдача", label: "Пересдача" },
-    { value: "оплата", label: "Оплата / счёт" },
-    { value: "договор", label: "Договор" },
-    { value: "возврат", label: "Возврат" },
-    { value: "жалоба", label: "Жалоба" },
-    { value: "срочный_вызов", label: "Срочный вызов" },
-    { value: "монтаж", label: "Монтаж / установка" },
-    { value: "поставка", label: "Поставка / доставка" },
-    { value: "обучение", label: "Обучение" },
-    { value: "сертификация", label: "Сертификация" },
-    { value: "ремонт", label: "Ремонт" },
-    { value: "апгрейд", label: "Апгрейд / модернизация" },
-    { value: "другое", label: "Другое" },
-  ];
-
   useEffect(() => {
     api
       .adminCheck()
@@ -79,8 +56,8 @@ export default function AdminPanelPage() {
 
   const getListParams = () => ({
     search: search || undefined,
-    status: statusFilter || undefined,
     request_category: categoryFilter || undefined,
+    sort: sortByDate,
     view: "open" as const,
     limit: pageSize,
     offset: (page - 1) * pageSize,
@@ -119,19 +96,40 @@ export default function AdminPanelPage() {
     }
   };
 
+  const loadRequestCategories = async () => {
+    try {
+      const res = await api.getTicketRequestCategories({
+        search: search || undefined,
+        view: "open",
+        sort: sortByDate,
+      });
+      const items = (res?.items || []).map((s) => (s || "").trim()).filter(Boolean);
+      // Ensure "другое" exists as fallback option
+      if (!items.includes("другое")) items.push("другое");
+      setRequestCategories(items);
+    } catch {
+      // API error: show only "Все категории" + fallback "другое"
+      setRequestCategories(["другое"]);
+    }
+  };
+
   useEffect(() => {
     loadCategories();
   }, []);
 
   useEffect(() => {
+    loadRequestCategories();
+  }, [isAdmin, search, categoryFilter, sortByDate]);
+
+  useEffect(() => {
     setPage(1);
-  }, [search, statusFilter, categoryFilter, pageSize]);
+  }, [search, categoryFilter, sortByDate, pageSize]);
 
   useEffect(() => {
     if (isAdmin) {
       loadTickets();
     }
-  }, [isAdmin, search, statusFilter, categoryFilter, page, pageSize]);
+  }, [isAdmin, search, categoryFilter, sortByDate, page, pageSize]);
 
   useEffect(() => {
     if (syncMessage) {
@@ -162,7 +160,7 @@ export default function AdminPanelPage() {
       clearTimeout(first);
       clearInterval(interval);
     };
-  }, [isAdmin, search, statusFilter, categoryFilter]);
+  }, [isAdmin, search, categoryFilter, sortByDate]);
 
   const handleRefresh = async () => {
     setSyncLoading(true);
@@ -191,7 +189,6 @@ export default function AdminPanelPage() {
     try {
       await api.exportCsvDownload({
         search: search || undefined,
-        status: statusFilter || undefined,
         category_id: categoryFilter ? Number(categoryFilter) : undefined,
       });
     } catch (e) {
@@ -206,8 +203,7 @@ export default function AdminPanelPage() {
     try {
       await api.exportXlsxDownload({
         search: search || undefined,
-        status: statusFilter || undefined,
-        request_category: categoryFilter || undefined,
+        category_id: categoryFilter ? Number(categoryFilter) : undefined,
         view: "open",
       });
     } catch (e) {
@@ -328,23 +324,23 @@ export default function AdminPanelPage() {
               />
             </div>
             <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 text-slate-700 focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 w-full sm:w-40 focus:bg-white transition-all"
-            >
-              <option value="">Все статусы</option>
-              <option value="not_completed">Не завершён</option>
-              <option value="completed">Завершён</option>
-            </select>
-            <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
               className="px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 text-slate-700 focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 w-full sm:w-48 focus:bg-white transition-all"
             >
               <option value="">Все категории</option>
               {requestCategories.map((c) => (
-                <option key={c.value} value={c.value}>{c.label}</option>
+                <option key={c} value={c}>{c}</option>
               ))}
+            </select>
+            <select
+              value={sortByDate}
+              onChange={(e) => setSortByDate(e.target.value as "created_at_desc" | "created_at_asc" | "priority")}
+              className="px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 text-slate-700 focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 w-full sm:w-52 focus:bg-white transition-all"
+            >
+              <option value="created_at_desc">Сначала новые</option>
+              <option value="created_at_asc">Сначала старые</option>
+              <option value="priority">По приоритету</option>
             </select>
           </div>
         </div>
@@ -385,7 +381,7 @@ export default function AdminPanelPage() {
                   <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur border-b border-slate-200">
                     <tr>
                       <th className="sticky left-0 z-30 text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap w-0 bg-[#f8fafc]" title="№" style={{ width: 44, minWidth: 44 }}>№</th>
-                      <th className="sticky left-[44px] z-30 text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap min-w-0 bg-[#f8fafc] shadow-[2px_0_6px_-2px_rgba(0,0,0,0.08)]" title={t("subject")} style={{ width: 220, minWidth: 220 }}>{t("subject")}</th>
+                      <th className="relative md:sticky md:left-[44px] z-30 text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap min-w-0 bg-[#f8fafc] md:shadow-[2px_0_6px_-2px_rgba(0,0,0,0.08)]" title={t("subject")} style={{ width: 220, minWidth: 220 }}>{t("subject")}</th>
                       <th className="text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis min-w-0">ФИО</th>
                       <th className="text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis min-w-0">Организация</th>
                       <th className="text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis min-w-0">Телефон</th>
@@ -405,7 +401,7 @@ export default function AdminPanelPage() {
                       return (
                         <tr key={ticket.id} className="group relative border-b border-slate-100 bg-white hover:bg-slate-50/80 hover:z-[1] transition-colors">
                           <td className="sticky left-0 z-20 py-2.5 px-2 text-sm text-slate-500 tabular-nums align-top w-0 bg-white group-hover:bg-slate-50" style={{ width: 44, minWidth: 44 }}>{startRow + index + 1}</td>
-                          <td className="sticky left-[44px] z-20 py-2.5 px-2 align-top min-w-0 bg-white group-hover:bg-slate-50 shadow-[2px_0_6px_-2px_rgba(0,0,0,0.06)]" style={{ width: 220, minWidth: 220 }}>
+                          <td className="relative md:sticky md:left-[44px] z-20 py-2.5 px-2 align-top min-w-0 bg-white group-hover:bg-slate-50 md:shadow-[2px_0_6px_-2px_rgba(0,0,0,0.06)]" style={{ width: 220, minWidth: 220 }}>
                             <div className="text-sm font-medium text-slate-800 break-words" title={ticket.device_info ? `${ticket.subject}\nУстройство: ${ticket.device_info}` : ticket.subject}>{ticket.subject}</div>
                             <div className="text-xs text-slate-500 break-words">{ticket.sender_email}</div>
                           </td>
@@ -425,7 +421,9 @@ export default function AdminPanelPage() {
                           </td>
                           <td className="py-2.5 px-2 text-sm text-slate-600 align-top min-w-0"><div className="leading-snug text-slate-700 break-words">{ticket.issue_summary || "—"}</div></td>
                           <td className="py-2.5 px-2 pr-8 align-top min-w-0"><SentimentBadge sentiment={ticket.sentiment} /></td>
-                          <td className="py-2.5 pl-6 pr-4 text-sm text-slate-600 align-top min-w-0"><span className="break-words">{ticket.request_category || categoryName(ticket.category_id) || "—"}</span></td>
+                          <td className="py-2.5 pl-6 pr-4 text-sm text-slate-600 align-top min-w-0">
+                            <span className="break-words">{(ticket.request_category || "").trim() || "другое"}</span>
+                          </td>
                           <td className="py-2.5 pl-5 pr-2 align-top min-w-0">
                             {Boolean(ticket.operator_required) ? (
                               <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200/80 whitespace-nowrap" title={ticket.operator_reason || "Требуется оператор"}>Требуется оператор</span>

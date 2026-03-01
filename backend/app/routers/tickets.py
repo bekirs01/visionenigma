@@ -6,6 +6,7 @@ from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Header, BackgroundTasks
 from fastapi.responses import StreamingResponse, Response
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 from app.db import get_db
 from app.models import Ticket, Category, AiAnalysis, TicketAttachment
 from app.schemas import TicketCreate, TicketRead, TicketUpdate, TicketsResponse, AnalyzeResponse, SuggestReplyResponse, TicketAttachmentRead
@@ -18,6 +19,35 @@ from app.services.telegram_service import maybe_send_telegram_alert
 from app.config import get_settings
 
 router = APIRouter(prefix="/api", tags=["tickets"])
+
+
+class RequestCategoriesResponse(BaseModel):
+    items: List[str]
+
+
+@router.get("/tickets/request-categories", response_model=RequestCategoriesResponse)
+def get_request_categories(
+    request: Request,
+    search: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    category_id: Optional[int] = Query(None),
+    view: Optional[str] = Query("open", description="open | answered"),
+    sort: Optional[str] = Query(None, description="created_at_desc | created_at_asc | created_desc | created_asc | priority"),
+    db: Session = Depends(get_db),
+    _admin: bool = Depends(require_admin_dep),
+):
+    # Use the same "open/answered" filtering semantics as list endpoint.
+    view_val = view if view in ("open", "answered") else "open"
+    items = TicketRepository.get_request_categories(
+        db,
+        search=search,
+        status=status,
+        category_id=category_id,
+        view=view_val,
+    )
+    # NOTE: sort is accepted for signature parity with admin panel,
+    # but doesn't affect distinct set.
+    return RequestCategoriesResponse(items=items)
 
 
 def process_ticket_ai_background(ticket_id: int):
@@ -70,6 +100,7 @@ def list_tickets(
     status: Optional[str] = Query(None),
     category_id: Optional[int] = Query(None),
     request_category: Optional[str] = Query(None),
+    sort: Optional[str] = Query(None, description="created_at_desc | created_at_asc | created_desc | created_asc | priority"),
     view: Optional[str] = Query(None, description="open = только не отвеченные (по умолчанию), answered = только архив"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
@@ -82,11 +113,11 @@ def list_tickets(
     repo = TicketRepository()
     if token:
         total = repo.get_count(db, search=search, status=status, category_id=category_id, request_category=request_category, client_token=token, view=view_val)
-        tickets = repo.get_list(db, search=search, status=status, category_id=category_id, request_category=request_category, client_token=token, view=view_val, limit=limit, offset=offset)
+        tickets = repo.get_list(db, search=search, status=status, category_id=category_id, request_category=request_category, client_token=token, view=view_val, sort=sort, limit=limit, offset=offset)
         return TicketsResponse(items=tickets, total=total)
     if require_admin(request):
         total = repo.get_count(db, search=search, status=status, category_id=category_id, request_category=request_category, client_token=None, view=view_val or "open")
-        tickets = repo.get_list(db, search=search, status=status, category_id=category_id, request_category=request_category, client_token=None, view=view_val or "open", limit=limit, offset=offset)
+        tickets = repo.get_list(db, search=search, status=status, category_id=category_id, request_category=request_category, client_token=None, view=view_val or "open", sort=sort, limit=limit, offset=offset)
         return TicketsResponse(items=tickets, total=total)
     return TicketsResponse(items=[], total=0)
 
@@ -174,12 +205,23 @@ def export_tickets_csv(
     search: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     category_id: Optional[int] = Query(None),
+    request_category: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     _admin: bool = Depends(require_admin_dep),
 ):
     """Экспорт тикетов в CSV с полными полями ЭРИС."""
     repo = TicketRepository()
-    tickets = repo.get_list(db, search=search, status=status, category_id=category_id, client_token=None, limit=5000, offset=0)
+    tickets = repo.get_list(
+        db,
+        search=search,
+        status=status,
+        category_id=category_id,
+        request_category=request_category,
+        client_token=None,
+        view=None,
+        limit=5000,
+        offset=0,
+    )
 
     output = io.StringIO()
     writer = csv.writer(output, quoting=csv.QUOTE_ALL)

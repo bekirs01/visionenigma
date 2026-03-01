@@ -54,6 +54,8 @@ class Settings(BaseSettings):
     smtp_user: str = ""
     smtp_pass: str = ""
     smtp_from: str = ""
+    resend_api_key: str = ""
+    resend_from: str = ""
     imap_host: str = ""
     imap_port: int = 993
     imap_user: str = ""

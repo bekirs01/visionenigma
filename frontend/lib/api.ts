@@ -42,12 +42,24 @@ export const api = {
 
   getCategories: () => fetchApi<import("@/app/types").Category[]>("/api/categories"),
 
-  getTickets: (params?: { search?: string; status?: string; category_id?: number; request_category?: string; view?: "open" | "answered"; limit?: number; offset?: number }, clientToken?: string) => {
+  getTicketRequestCategories: (params?: { search?: string; status?: string; category_id?: number; view?: "open" | "answered"; sort?: "created_at_desc" | "created_at_asc" | "priority" }) => {
+    const sp = new URLSearchParams();
+    if (params?.search) sp.set("search", params.search);
+    if (params?.status) sp.set("status", params.status);
+    if (params?.category_id != null) sp.set("category_id", String(params.category_id));
+    if (params?.view) sp.set("view", params.view);
+    if (params?.sort) sp.set("sort", params.sort);
+    const q = sp.toString();
+    return fetchApi<{ items: string[] }>(`/api/tickets/request-categories${q ? `?${q}` : ""}`);
+  },
+
+  getTickets: (params?: { search?: string; status?: string; category_id?: number; request_category?: string; sort?: "created_at_desc" | "created_at_asc" | "priority"; view?: "open" | "answered"; limit?: number; offset?: number }, clientToken?: string) => {
     const sp = new URLSearchParams();
     if (params?.search) sp.set("search", params.search);
     if (params?.status) sp.set("status", params.status);
     if (params?.category_id != null) sp.set("category_id", String(params.category_id));
     if (params?.request_category) sp.set("request_category", params.request_category);
+    if (params?.sort) sp.set("sort", params.sort);
     if (params?.view) sp.set("view", params.view);
     if (params?.limit) sp.set("limit", String(params.limit));
     if (params?.offset) sp.set("offset", String(params.offset));
