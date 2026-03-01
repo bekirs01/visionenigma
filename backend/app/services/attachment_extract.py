@@ -32,6 +32,10 @@ def extract_text_from_attachment(filename: str, mime_type: str, data: bytes) -> 
     if any(x in mime for x in ("image/jpeg", "image/jpg", "image/png", "image/webp")):
         return _extract_image(data)
 
+    # TXT / CSV
+    if "text/plain" in mime or "text/csv" in mime or fn.endswith((".txt", ".csv")):
+        return _extract_text_file(data)
+
     # DOCX
     if fn.endswith(".docx") or "wordprocessingml" in mime:
         return _extract_docx(data)
@@ -46,6 +50,21 @@ def extract_text_from_attachment(filename: str, mime_type: str, data: bytes) -> 
 
     # Остальные типы (xls и т.д.) — не извлекаем
     return False, "Вложение получено, но автоматическое извлечение текста для данного формата не поддерживается. Попросите клиента описать содержание текстом или прислать PDF/изображение."
+
+
+def _extract_text_file(data: bytes) -> Tuple[bool, str]:
+    """TXT/CSV: dosyayi duz metin olarak okur (UTF-8 / latin-1 fallback)."""
+    try:
+        try:
+            text = data.decode("utf-8")
+        except UnicodeDecodeError:
+            text = data.decode("latin-1")
+        text = text.strip()
+        if text:
+            return True, _truncate_safe(text)
+        return True, ""
+    except Exception:
+        return False, "Текстовый файл не удалось прочитать."
 
 
 def _extract_docx(data: bytes) -> Tuple[bool, str]:
