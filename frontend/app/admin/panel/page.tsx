@@ -380,8 +380,8 @@ export default function AdminPanelPage() {
                   </colgroup>
                   <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur border-b border-slate-200">
                     <tr>
-                      <th className="sticky left-0 z-30 text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap w-0 bg-[#f8fafc]" title="№" style={{ width: 44, minWidth: 44 }}>№</th>
-                      <th className="relative md:sticky md:left-[44px] z-30 text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap min-w-0 bg-[#f8fafc] md:shadow-[2px_0_6px_-2px_rgba(0,0,0,0.08)]" title={t("subject")} style={{ width: 220, minWidth: 220 }}>{t("subject")}</th>
+                      <th className="text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap w-0" title="№" style={{ width: 44, minWidth: 44 }}>№</th>
+                      <th className="text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap min-w-0" title={t("subject")} style={{ width: 220, minWidth: 220 }}>{t("subject")}</th>
                       <th className="text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis min-w-0">ФИО</th>
                       <th className="text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis min-w-0">Организация</th>
                       <th className="text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis min-w-0">Телефон</th>
@@ -399,9 +399,9 @@ export default function AdminPanelPage() {
                     {tickets.map((ticket, index) => {
                       const startRow = (page - 1) * pageSize;
                       return (
-                        <tr key={ticket.id} className="group relative border-b border-slate-100 bg-white hover:bg-slate-50/80 hover:z-[1] transition-colors">
-                          <td className="sticky left-0 z-20 py-2.5 px-2 text-sm text-slate-500 tabular-nums align-top w-0 bg-white group-hover:bg-slate-50" style={{ width: 44, minWidth: 44 }}>{startRow + index + 1}</td>
-                          <td className="relative md:sticky md:left-[44px] z-20 py-2.5 px-2 align-top min-w-0 bg-white group-hover:bg-slate-50 md:shadow-[2px_0_6px_-2px_rgba(0,0,0,0.06)]" style={{ width: 220, minWidth: 220 }}>
+                        <tr key={ticket.id} className="group border-b border-slate-100 hover:bg-emerald-50/30 transition-colors">
+                          <td className="py-2.5 px-2 text-sm font-medium text-slate-400 tabular-nums align-top w-0" style={{ width: 44, minWidth: 44 }}>{startRow + index + 1}</td>
+                          <td className="py-2.5 px-2 align-top min-w-0" style={{ width: 220, minWidth: 220 }}>
                             <div className="text-sm font-medium text-slate-800 break-words" title={ticket.device_info ? `${ticket.subject}\nУстройство: ${ticket.device_info}` : ticket.subject}>{ticket.subject}</div>
                             <div className="text-xs text-slate-500 break-words">{ticket.sender_email}</div>
                           </td>
@@ -432,14 +432,22 @@ export default function AdminPanelPage() {
                             )}
                           </td>
                           <td className="py-2.5 px-2 pr-2 text-sm text-slate-500 align-top min-w-0 whitespace-nowrap">{ticket.created_at ? new Date(ticket.created_at).toLocaleString("ru") : "—"}</td>
-                          <td className="py-2.5 pl-5 pr-2 align-top w-0 overflow-visible">
-                            <div className="flex items-center gap-1 flex-nowrap justify-start min-w-0 ml-3 -translate-y-[3px]">
-                              <Link href={`/tickets/${ticket.id}`} className="inline-flex items-center gap-0.5 text-violet-600 hover:text-violet-700 font-medium text-sm shrink-0 whitespace-nowrap">
+                          <td className="py-2.5 px-2 align-top">
+                            <div className="flex items-center gap-1.5">
+                              <Link
+                                href={`/tickets/${ticket.id}`}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors whitespace-nowrap"
+                              >
                                 {t("open")}
-                                <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                               </Link>
-                              <button type="button" onClick={() => handleDeleteTicket(ticket.id)} className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors shrink-0" title={t("delete") || "Удалить тикет"}>
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteTicket(ticket.id)}
+                                className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                                title={t("delete") || "Удалить"}
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                               </button>
                             </div>
                           </td>

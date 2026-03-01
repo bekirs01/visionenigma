@@ -201,7 +201,7 @@ export default function AdminArchivePage() {
               <table className="w-full">
                 <thead>
                   <tr className="bg-slate-50/80 border-b border-slate-200/60">
-                    <th className="sticky left-0 z-30 text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50/80 w-[44px]">№</th>
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[44px]">№</th>
                     <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">Тема</th>
                     <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">От</th>
                     <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">Категория</th>
@@ -222,7 +222,7 @@ export default function AdminArchivePage() {
                         key={ticket.id}
                         className="group border-b border-slate-100 hover:bg-violet-50/40 transition-colors"
                       >
-                        <td className="sticky left-0 z-20 py-3 px-4 text-sm font-medium text-slate-400 bg-white group-hover:bg-violet-50/40">
+                        <td className="py-3 px-4 text-sm font-medium text-slate-400">
                           {rowNum}
                         </td>
                         <td className="py-3 px-4 text-sm text-slate-800 font-medium max-w-[200px]">
