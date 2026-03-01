@@ -64,7 +64,7 @@ def _extract_text_file(data: bytes) -> Tuple[bool, str]:
             return True, _truncate_safe(text)
         return True, ""
     except Exception:
-        return False, "Текстовый файл не удалось прочитать."
+        return False, "Не удалось прочитать текстовый файл."
 
 
 def _extract_docx(data: bytes) -> Tuple[bool, str]:
@@ -89,7 +89,7 @@ def _extract_docx(data: bytes) -> Tuple[bool, str]:
             return True, _truncate_safe(text.strip())
         return True, ""
     except Exception:
-        return False, "DOCX dosyasi acilamadi. Lutfen icerigi metin olarak gonderin."
+        return False, "Не удалось прочитать DOCX файл. Пожалуйста, опишите содержание текстом или отправьте в формате PDF."
 
 
 def _extract_pdf(data: bytes) -> Tuple[bool, str]:
@@ -105,7 +105,7 @@ def _extract_pdf(data: bytes) -> Tuple[bool, str]:
     except Exception:
         pass
     # OCR недоступен или не сработал — AI всё равно получит пояснение и сформирует ответ
-    return True, "[PDF görüntü tabanlı; OCR yapılamadı. Lütfen içeriği metin olarak yazın veya farklı format gönderin.]"
+    return True, "[PDF содержит только изображения; OCR не удался. Пожалуйста, опишите содержание текстом или отправьте в другом формате.]"
 
 
 def _pdf_text_extract(data: bytes) -> str:

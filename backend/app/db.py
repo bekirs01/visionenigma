@@ -112,11 +112,13 @@ def _table_exists(conn, table_name: str, is_sqlite: bool) -> bool:
 
 
 def ensure_ticket_attachments_table():
-    """Создаёт таблицу ticket_attachments при отсутствии."""
+    """Создаёт таблицу ticket_attachments при отсутствии или исправляет схему."""
     try:
         with engine.connect() as conn:
             is_sqlite = "sqlite" in str(engine.url)
             if _table_exists(conn, "ticket_attachments", is_sqlite):
+                if not is_sqlite:
+                    _fix_attachments_id_serial(conn)
                 return
             if is_sqlite:
                 conn.execute(text("""
@@ -145,3 +147,34 @@ def ensure_ticket_attachments_table():
             conn.commit()
     except Exception as e:
         print(f"[DB] ensure_ticket_attachments_table: {e}", flush=True)
+
+
+def _fix_attachments_id_serial(conn):
+    """If ticket_attachments.id has no default (not auto-increment), fix it."""
+    try:
+        r = conn.execute(text(
+            "SELECT column_default FROM information_schema.columns "
+            "WHERE table_name = 'ticket_attachments' AND column_name = 'id'"
+        ))
+        row = r.fetchone()
+        if row and row[0] and "nextval" in str(row[0]):
+            return
+        print("[DB] Fixing ticket_attachments.id: adding SERIAL sequence...", flush=True)
+        conn.execute(text("CREATE SEQUENCE IF NOT EXISTS ticket_attachments_id_seq"))
+        conn.execute(text(
+            "ALTER TABLE ticket_attachments "
+            "ALTER COLUMN id SET DEFAULT nextval('ticket_attachments_id_seq')"
+        ))
+        conn.execute(text(
+            "ALTER TABLE ticket_attachments ALTER COLUMN id TYPE INTEGER USING id::integer"
+        ))
+        conn.execute(text(
+            "SELECT setval('ticket_attachments_id_seq', COALESCE((SELECT MAX(id) FROM ticket_attachments), 0))"
+        ))
+        conn.execute(text(
+            "ALTER SEQUENCE ticket_attachments_id_seq OWNED BY ticket_attachments.id"
+        ))
+        conn.commit()
+        print("[DB] ticket_attachments.id fixed: auto-increment enabled", flush=True)
+    except Exception as e:
+        print(f"[DB] _fix_attachments_id_serial: {e}", flush=True)

@@ -307,18 +307,33 @@ class ImapEmailFetcher(EmailFetcher):
 
         return body.strip()
 
+    # MIME types that are actual message body, not file attachments
+    _BODY_MIME_TYPES = {"text/plain", "text/html", "multipart/alternative", "multipart/mixed", "multipart/related"}
+
     def _get_attachments(self, msg: EmailMessage) -> List[EmailAttachment]:
-        """Извлекает вложения из письма (content-disposition = attachment)."""
+        """Извлекает вложения из письма.
+
+        Обрабатывает:
+        - Content-Disposition: attachment (стандартные вложения)
+        - Content-Disposition: inline с именем файла (встроенные изображения/PDF)
+        - Части без Content-Disposition, но с именем файла и не-текстовым MIME
+        """
         result: List[EmailAttachment] = []
         if not msg.is_multipart():
             return result
         for part in msg.walk():
-            content_disposition = str(part.get("Content-Disposition", ""))
-            if "attachment" not in content_disposition.lower():
+            mime_type = (part.get_content_type() or "application/octet-stream").lower()
+
+            if mime_type.startswith("multipart/"):
                 continue
+
+            content_disposition = str(part.get("Content-Disposition", ""))
+            disp_lower = content_disposition.lower()
+            is_explicit_attachment = "attachment" in disp_lower
+            is_inline = "inline" in disp_lower
+
             filename = part.get_filename()
             if not filename:
-                # Попытка извлечь имя из Content-Type name=
                 ct = part.get("Content-Type", "")
                 if "name=" in ct:
                     for token in ct.split(";"):
@@ -326,14 +341,28 @@ class ImapEmailFetcher(EmailFetcher):
                         if token.lower().startswith("name="):
                             filename = token[5:].strip(" \"'")
                             break
-                if not filename:
-                    filename = "attachment.bin"
+
+            should_extract = False
+            if is_explicit_attachment:
+                should_extract = True
+            elif filename and mime_type not in self._BODY_MIME_TYPES:
+                should_extract = True
+            elif is_inline and filename and mime_type not in self._BODY_MIME_TYPES:
+                should_extract = True
+
+            if not should_extract:
+                continue
+
+            if not filename:
+                ext = mime_type.split("/")[-1].split(";")[0].strip()
+                filename = f"attachment.{ext}" if ext and ext != "octet-stream" else "attachment.bin"
+
             if isinstance(filename, bytes):
                 filename = filename.decode("utf-8", errors="replace")
-            mime_type = part.get_content_type() or "application/octet-stream"
+
             try:
                 payload = part.get_payload(decode=True)
-                if payload:
+                if payload and len(payload) > 0:
                     result.append(EmailAttachment(filename=filename, mime_type=mime_type, data=payload))
             except Exception:
                 continue
