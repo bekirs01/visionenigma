@@ -362,37 +362,37 @@ export default function AdminPanelPage() {
           ) : (
             <>
               <div className="overflow-x-auto max-h-[70vh] min-w-0">
-                <table className="w-full border-collapse" style={{ minWidth: "1420px", tableLayout: "fixed" }}>
+                <table className="w-full border-collapse" style={{ minWidth: "1660px", tableLayout: "fixed" }}>
                   <colgroup>
-                    <col style={{ width: 44 }} />
+                    <col style={{ width: 48 }} />
                     <col style={{ width: 220 }} />
-                    <col style={{ width: 120 }} />
-                    <col style={{ width: 140 }} />
-                    <col style={{ width: 110 }} />
-                    <col style={{ width: 100 }} />
-                    <col style={{ width: 120 }} />
-                    <col style={{ width: 200 }} />
-                    <col style={{ width: 115 }} />
-                    <col style={{ width: 110 }} />
-                    <col style={{ width: 185 }} />
                     <col style={{ width: 130 }} />
-                    <col style={{ width: 110 }} />
+                    <col style={{ width: 130 }} />
+                    <col style={{ width: 120 }} />
+                    <col style={{ width: 100 }} />
+                    <col style={{ width: 100 }} />
+                    <col style={{ width: 190 }} />
+                    <col style={{ width: 140 }} />
+                    <col style={{ width: 140 }} />
+                    <col style={{ width: 175 }} />
+                    <col style={{ width: 155 }} />
+                    <col style={{ width: 120 }} />
                   </colgroup>
-                  <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur border-b border-slate-200">
+                  <thead className="sticky top-0 z-40 bg-slate-50 border-b border-slate-200">
                     <tr>
-                      <th className="text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap w-0" title="№" style={{ width: 44, minWidth: 44 }}>№</th>
-                      <th className="text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap min-w-0" title={t("subject")} style={{ width: 220, minWidth: 220 }}>{t("subject")}</th>
-                      <th className="text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis min-w-0">ФИО</th>
-                      <th className="text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis min-w-0">Организация</th>
-                      <th className="text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis min-w-0">Телефон</th>
-                      <th className="text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis min-w-0">Прибор</th>
-                      <th className="text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis min-w-0" title="Заводские №">Завод. №</th>
-                      <th className="text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis min-w-0">Суть вопроса</th>
-                      <th className="text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap min-w-0">ТОНАЛЬНОСТЬ</th>
-                      <th className="text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis min-w-0">Категория</th>
-                      <th className="text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis min-w-0">Оператор</th>
-                      <th className="text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis min-w-0" title={t("createdAt")}>{t("createdAt")}</th>
-                      <th className="text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-0"></th>
+                      <th className="sticky left-0 z-50 text-left py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap bg-slate-50 border-r border-slate-200/50" style={{ width: 48, minWidth: 48 }}>№</th>
+                      <th className="md:sticky md:left-[48px] z-50 text-left py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap bg-slate-50 md:border-r md:border-slate-200/50" title={t("subject")} style={{ width: 220, minWidth: 220 }}>{t("subject")}</th>
+                      <th className="text-left py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis min-w-0">ФИО</th>
+                      <th className="text-left py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis min-w-0">Организация</th>
+                      <th className="text-left py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis min-w-0">Телефон</th>
+                      <th className="text-left py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis min-w-0">Прибор</th>
+                      <th className="text-left py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis min-w-0" title="Заводские №">Завод. №</th>
+                      <th className="text-left py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis min-w-0">Суть вопроса</th>
+                      <th className="text-left py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap min-w-0">Тональность</th>
+                      <th className="text-left py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis min-w-0">Категория</th>
+                      <th className="text-left py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis min-w-0">Оператор</th>
+                      <th className="text-left py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis min-w-0" title={t("createdAt")}>{t("createdAt")}</th>
+                      <th className="text-left py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider w-0"></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -400,16 +400,16 @@ export default function AdminPanelPage() {
                       const startRow = (page - 1) * pageSize;
                       return (
                         <tr key={ticket.id} className="group border-b border-slate-100 hover:bg-emerald-50/30 transition-colors">
-                          <td className="py-2.5 px-2 text-sm font-medium text-slate-400 tabular-nums align-top w-0" style={{ width: 44, minWidth: 44 }}>{startRow + index + 1}</td>
-                          <td className="py-2.5 px-2 align-top min-w-0" style={{ width: 220, minWidth: 220 }}>
+                          <td className="sticky left-0 z-20 py-3 px-3 text-sm font-medium text-slate-400 tabular-nums align-top bg-white group-hover:bg-emerald-50 border-r border-slate-100/50" style={{ width: 48, minWidth: 48 }}>{startRow + index + 1}</td>
+                          <td className="md:sticky md:left-[48px] z-20 py-3 px-3 align-top bg-white group-hover:bg-emerald-50 md:border-r md:border-slate-100/50" style={{ width: 220, minWidth: 220 }}>
                             <div className="text-sm font-medium text-slate-800 break-words" title={ticket.device_info ? `${ticket.subject}\nУстройство: ${ticket.device_info}` : ticket.subject}>{ticket.subject}</div>
-                            <div className="text-xs text-slate-500 break-words">{ticket.sender_email}</div>
+                            <div className="text-xs text-slate-500 break-words mt-0.5">{ticket.sender_email}</div>
                           </td>
-                          <td className="py-2.5 px-2 text-sm text-slate-700 align-top min-w-0"><span className="break-words">{ticket.sender_full_name || ticket.sender_name || "—"}</span></td>
-                          <td className="py-2.5 px-2 text-sm text-slate-600 align-top min-w-0"><span className="break-words">{ticket.object_name || "—"}</span></td>
-                          <td className="py-2.5 px-2 text-sm text-slate-600 align-top min-w-0"><span className="break-words">{ticket.sender_phone || "—"}</span></td>
-                          <td className="py-2.5 px-2 text-sm text-slate-600 align-top min-w-0"><span className="break-words">{ticket.device_type || "—"}</span></td>
-                          <td className="py-2.5 px-2 text-sm text-slate-600 align-top min-w-0">
+                          <td className="py-3 px-3 text-sm text-slate-700 align-top min-w-0"><span className="break-words">{ticket.sender_full_name || ticket.sender_name || "—"}</span></td>
+                          <td className="py-3 px-3 text-sm text-slate-600 align-top min-w-0"><span className="break-words">{ticket.object_name || "—"}</span></td>
+                          <td className="py-3 px-3 text-sm text-slate-600 align-top min-w-0"><span className="break-words">{ticket.sender_phone || "—"}</span></td>
+                          <td className="py-3 px-3 text-sm text-slate-600 align-top min-w-0"><span className="break-words">{ticket.device_type || "—"}</span></td>
+                          <td className="py-3 px-3 text-sm text-slate-600 align-top min-w-0">
                             {ticket.serial_numbers?.length ? (
                               <div className="flex flex-wrap gap-1">
                                 {ticket.serial_numbers.slice(0, 3).map((sn, i) => (
@@ -419,24 +419,24 @@ export default function AdminPanelPage() {
                               </div>
                             ) : <span className="text-slate-400">—</span>}
                           </td>
-                          <td className="py-2.5 px-2 text-sm text-slate-600 align-top min-w-0"><div className="leading-snug text-slate-700 break-words">{ticket.issue_summary || "—"}</div></td>
-                          <td className="py-2.5 px-2 pr-8 align-top min-w-0"><SentimentBadge sentiment={ticket.sentiment} /></td>
-                          <td className="py-2.5 pl-6 pr-4 text-sm text-slate-600 align-top min-w-0">
-                            <span className="break-words">{(ticket.request_category || "").trim() || "другое"}</span>
+                          <td className="py-3 px-3 text-sm text-slate-600 align-top min-w-0"><div className="leading-snug text-slate-700 break-words">{ticket.issue_summary || "—"}</div></td>
+                          <td className="py-3 pl-3 pr-8 align-top min-w-0"><SentimentBadge sentiment={ticket.sentiment} /></td>
+                          <td className="py-3 pl-6 pr-6 text-sm text-slate-600 align-top min-w-0">
+                            <span className="break-words">{(ticket.request_category || "").trim().replace(/_/g, " ") || "другое"}</span>
                           </td>
-                          <td className="py-2.5 pl-5 pr-2 align-top min-w-0">
+                          <td className="py-3 pl-5 pr-3 align-top min-w-0">
                             {Boolean(ticket.operator_required) ? (
                               <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200/80 whitespace-nowrap" title={ticket.operator_reason || "Требуется оператор"}>Требуется оператор</span>
                             ) : (
                               <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-50 text-slate-500 border border-slate-200/80 whitespace-nowrap">Оператор не требуется</span>
                             )}
                           </td>
-                          <td className="py-2.5 px-2 pr-2 text-sm text-slate-500 align-top min-w-0 whitespace-nowrap">{ticket.created_at ? new Date(ticket.created_at).toLocaleString("ru") : "—"}</td>
-                          <td className="py-2.5 px-2 align-top">
-                            <div className="flex items-center gap-1.5">
+                          <td className="py-3 px-3 text-sm text-slate-500 align-top min-w-0 whitespace-nowrap">{ticket.created_at ? new Date(ticket.created_at).toLocaleString("ru") : "—"}</td>
+                          <td className="py-3 px-3 align-top">
+                            <div className="flex items-center gap-2">
                               <Link
                                 href={`/tickets/${ticket.id}`}
-                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors whitespace-nowrap"
+                                className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/60 transition-colors whitespace-nowrap shadow-sm"
                               >
                                 {t("open")}
                                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>

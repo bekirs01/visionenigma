@@ -221,9 +221,9 @@ class AIAgent:
         mapping = {
             "неисправность": "technical",
             "калибровка": "technical",
-            "запрос_документации": "other",
+            "запрос документации": "other",
             "гарантия": "billing",
-            "замена_датчика": "technical",
+            "замена датчика": "technical",
             "консультация": "other",
             "другое": "other"
         }

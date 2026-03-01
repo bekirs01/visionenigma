@@ -234,7 +234,7 @@ export default function AdminArchivePage() {
                         </td>
                         <td className="py-3 px-4 text-sm">
                           <span className="inline-flex px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-xs font-medium">
-                            {(ticket.request_category || "").trim() || "другое"}
+                            {(ticket.request_category || "").trim().replace(/_/g, " ") || "другое"}
                           </span>
                         </td>
                         <td className="py-3 px-4">

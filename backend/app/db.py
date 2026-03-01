@@ -46,6 +46,28 @@ def ensure_db_fallback():
         Base.metadata.create_all(bind=engine)
     ensure_ticket_ai_columns()
     ensure_ticket_attachments_table()
+    _fix_category_underscores()
+
+
+def _fix_category_underscores():
+    """Replaces underscores with spaces in request_category and ai_category columns."""
+    try:
+        with engine.connect() as conn:
+            r = conn.execute(text(
+                "UPDATE tickets SET request_category = REPLACE(request_category, '_', ' ') "
+                "WHERE request_category LIKE '%\\_%' ESCAPE '\\'"
+            ))
+            if r.rowcount and r.rowcount > 0:
+                print(f"[DB] Fixed {r.rowcount} request_category values (removed underscores)", flush=True)
+            r2 = conn.execute(text(
+                "UPDATE tickets SET ai_category = REPLACE(ai_category, '_', ' ') "
+                "WHERE ai_category LIKE '%\\_%' ESCAPE '\\'"
+            ))
+            if r2.rowcount and r2.rowcount > 0:
+                print(f"[DB] Fixed {r2.rowcount} ai_category values (removed underscores)", flush=True)
+            conn.commit()
+    except Exception as e:
+        print(f"[DB] _fix_category_underscores: {e}", flush=True)
 
 
 def _ticket_columns_sqlite(conn):
