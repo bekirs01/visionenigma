@@ -47,6 +47,37 @@ def ensure_db_fallback():
     ensure_ticket_ai_columns()
     ensure_ticket_attachments_table()
     _fix_category_underscores()
+    _send_missed_telegram_alerts()
+
+
+def _send_missed_telegram_alerts():
+    """Startup: negatif/operator_required olup telegram_notified_at=NULL kalan ticket'lara bildirim gönder."""
+    try:
+        from app.services.telegram_service import maybe_send_telegram_alert
+        from app.models import Ticket
+
+        db = SessionLocal()
+        try:
+            missed = db.query(Ticket).filter(
+                Ticket.telegram_notified_at.is_(None),
+                Ticket.ai_status == "done",
+                (Ticket.sentiment == "negative") | (Ticket.operator_required == True),
+            ).all()
+            if not missed:
+                return
+            count = 0
+            for t in missed:
+                try:
+                    if maybe_send_telegram_alert(db, t):
+                        count += 1
+                except Exception:
+                    pass
+            if count:
+                print(f"[DB] Sent {count} missed Telegram alerts on startup", flush=True)
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"[DB] _send_missed_telegram_alerts: {e}", flush=True)
 
 
 def _fix_category_underscores():
