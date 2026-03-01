@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const isProd = process.env.NODE_ENV === "production";
 const BACKEND_URL_RAW = isProd
-  ? (process.env.NEXT_PUBLIC_API_BASE_URL || "https://visionenigma-production-f911.up.railway.app")
+  ? (process.env.NEXT_PUBLIC_API_BASE_URL || "https://backend-production-5745.up.railway.app")
   : "http://127.0.0.1:8000";
 const BACKEND_URL = BACKEND_URL_RAW.replace(/\/+$/, "");
 
